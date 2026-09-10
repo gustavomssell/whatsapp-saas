@@ -143,6 +143,15 @@ export const api = {
       body: JSON.stringify({ for_everyone: forEveryone }),
     }),
 
+  forwardMessage: (jid: string, msgId: string) =>
+    request<any>(`/whatsapp/conversations/${encodeURIComponent(jid)}/forward`, {
+      method: "POST",
+      body: JSON.stringify({ msg_id: msgId }),
+    }),
+
+  searchMessages: (jid: string, query: string) =>
+    request<any[]>(`/whatsapp/conversations/${encodeURIComponent(jid)}/search?q=${encodeURIComponent(query)}`),
+
   getTagColors: () =>
     request<any[]>("/whatsapp/tag-colors"),
 

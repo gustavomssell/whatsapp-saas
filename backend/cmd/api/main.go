@@ -83,6 +83,8 @@ func main() {
 				r.Post("/conversations/bulk", h.BulkActions)
 				r.Post("/conversations/{remoteMsgID}/content", h.UpdateMessageContent)
 				r.Delete("/conversations/{jid}/messages/{msgId}", h.DeleteMessage)
+				r.Post("/conversations/{jid}/forward", h.ForwardMessage)
+				r.Get("/conversations/{jid}/search", h.SearchMessages)
 
 				r.Get("/quick-replies", h.ListQuickReplies)
 				r.Post("/quick-replies", h.CreateQuickReply)

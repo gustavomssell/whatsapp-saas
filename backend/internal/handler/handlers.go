@@ -544,6 +544,80 @@ func (h *Handler) DeleteMessage(w http.ResponseWriter, r *http.Request) {
 	h.respondJSON(w, http.StatusOK, map[string]string{"message": "deletado"})
 }
 
+// ── Forward Message ──────────────────────────────────────────
+
+func (h *Handler) ForwardMessage(w http.ResponseWriter, r *http.Request) {
+	orgID := middleware.GetOrgID(r.Context())
+	jid := chi.URLParam(r, "jid")
+
+	var body struct {
+		MsgID string `json:"msg_id"`
+	}
+	if err := json.NewDecoder(r.Body).Decode(&body); err != nil || body.MsgID == "" {
+		h.respondError(w, http.StatusBadRequest, "msg_id é obrigatório")
+		return
+	}
+
+	origMsg, err := h.repo.FindMessageByRemoteID(r.Context(), orgID, body.MsgID)
+	if err != nil {
+		h.respondError(w, http.StatusNotFound, "mensagem não encontrada")
+		return
+	}
+
+	conv, err := h.repo.FindConversationByJid(r.Context(), orgID, jid)
+	if err != nil {
+		h.respondError(w, http.StatusNotFound, "conversa de destino não encontrada")
+		return
+	}
+
+	_, instanceName, err := h.repo.GetOrgInstance(r.Context(), orgID)
+	if err != nil || instanceName == "" {
+		h.respondError(w, http.StatusBadRequest, "WhatsApp não conectado")
+		return
+	}
+
+	text := origMsg.Content
+	if text == "" {
+		text = "[" + origMsg.MsgType + "]"
+	}
+
+	msg, err := h.wa.SendMessage(r.Context(), orgID, jid, text, "")
+	if err != nil {
+		h.respondError(w, http.StatusInternalServerError, err.Error())
+		return
+	}
+
+	_ = conv
+	_ = instanceName
+	h.respondJSON(w, http.StatusCreated, msg)
+}
+
+// ── Search Messages ──────────────────────────────────────────
+
+func (h *Handler) SearchMessages(w http.ResponseWriter, r *http.Request) {
+	orgID := middleware.GetOrgID(r.Context())
+	jid := chi.URLParam(r, "jid")
+	query := r.URL.Query().Get("q")
+
+	if query == "" {
+		h.respondError(w, http.StatusBadRequest, "q é obrigatório")
+		return
+	}
+
+	conv, err := h.repo.FindConversationByJid(r.Context(), orgID, jid)
+	if err != nil {
+		h.respondError(w, http.StatusNotFound, "conversa não encontrada")
+		return
+	}
+
+	msgs, err := h.repo.SearchMessages(r.Context(), conv.ID, query, 50)
+	if err != nil {
+		h.respondError(w, http.StatusInternalServerError, err.Error())
+		return
+	}
+	h.respondJSON(w, http.StatusOK, msgs)
+}
+
 // ── Tag Colors ────────────────────────────────────────────────
 
 func (h *Handler) GetTagColors(w http.ResponseWriter, r *http.Request) {
