@@ -5,6 +5,7 @@ import {
   MessageSquare,
   Users,
   Settings,
+  CreditCard,
   LogOut,
   Menu,
   X,
@@ -19,6 +20,7 @@ const navItems = [
   { path: "/", label: "Início", icon: LayoutDashboard },
   { path: "/inbox", label: "WhatsApp Inbox", icon: MessageSquare },
   { path: "/groups", label: "Grupos", icon: Users },
+  { path: "/billing", label: "Planos", icon: CreditCard },
   { path: "/settings", label: "Configurações", icon: Settings },
 ];
 

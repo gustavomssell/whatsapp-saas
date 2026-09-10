@@ -187,6 +187,27 @@ export const api = {
   getMembers: () =>
     request<{ data: any[] }>("/members"),
 
+  getPlans: () =>
+    request<any[]>("/billing/plans"),
+
+  getOrgPlan: () =>
+    request<any>("/billing/plan"),
+
+  subscribePlan: (planName: string, billingCycle: string = "monthly") =>
+    request<any>("/billing/subscribe", {
+      method: "POST",
+      body: JSON.stringify({ plan_name: planName, billing_cycle: billingCycle }),
+    }),
+
+  cancelSubscription: () =>
+    request<any>("/billing/cancel", { method: "POST" }),
+
+  getUsage: (period?: string) =>
+    request<any>(`/billing/usage${period ? `?period=${period}` : ""}`),
+
+  getInvoices: () =>
+    request<any[]>("/billing/invoices"),
+
   uploadFile: async (file: File) => {
     const token = localStorage.getItem("wpsaas-auth");
     let parsed: { state?: { token?: string } } = {};

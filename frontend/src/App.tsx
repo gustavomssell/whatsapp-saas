@@ -7,6 +7,7 @@ import DashboardPage from "./features/dashboard/DashboardPage";
 import InboxPage from "./features/inbox/InboxPage";
 import GroupsPage from "./features/groups/GroupsPage";
 import SettingsPage from "./features/settings/SettingsPage";
+import BillingPage from "./features/billing/BillingPage";
 
 function ProtectedRoute({ children }: { children: React.ReactNode }) {
   const token = useAuthStore((s) => s.token);
@@ -31,6 +32,7 @@ export default function App() {
                   <Route path="/inbox/:jid" element={<InboxPage />} />
                   <Route path="/groups" element={<GroupsPage />} />
                   <Route path="/settings" element={<SettingsPage />} />
+                  <Route path="/billing" element={<BillingPage />} />
                 </Routes>
               </DashboardLayout>
             </ProtectedRoute>
