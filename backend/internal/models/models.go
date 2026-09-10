@@ -235,3 +235,17 @@ type OrgPlanInfo struct {
 	Usage         UsageTracking  `json:"usage"`
 	HasFeature    func(string) bool `json:"-"`
 }
+
+type APIKey struct {
+	ID          string          `json:"id" db:"id"`
+	OrgID       string          `json:"org_id" db:"org_id"`
+	Name        string          `json:"name" db:"name"`
+	KeyHash     string          `json:"-" db:"key_hash"`
+	KeyPrefix   string          `json:"key_prefix" db:"key_prefix"`
+	Permissions json.RawMessage `json:"permissions" db:"permissions"`
+	RateLimit   int             `json:"rate_limit" db:"rate_limit"`
+	IsActive    bool            `json:"is_active" db:"is_active"`
+	LastUsedAt  *time.Time      `json:"last_used_at" db:"last_used_at"`
+	ExpiresAt   *time.Time      `json:"expires_at" db:"expires_at"`
+	CreatedAt   time.Time       `json:"created_at" db:"created_at"`
+}

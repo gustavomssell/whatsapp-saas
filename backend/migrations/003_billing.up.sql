@@ -73,6 +73,24 @@ CREATE INDEX IF NOT EXISTS idx_usage_tracking_org_period ON usage_tracking(org_i
 CREATE INDEX IF NOT EXISTS idx_invoices_org ON invoices(org_id);
 CREATE INDEX IF NOT EXISTS idx_invoices_status ON invoices(status);
 
+-- API Keys para acesso externo
+CREATE TABLE IF NOT EXISTS api_keys (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    org_id UUID REFERENCES organizations(id) ON DELETE CASCADE NOT NULL,
+    name VARCHAR(200) NOT NULL,
+    key_hash VARCHAR(255) NOT NULL UNIQUE,
+    key_prefix VARCHAR(10) NOT NULL,
+    permissions JSONB DEFAULT '["read"]',
+    rate_limit INT DEFAULT 100,
+    is_active BOOLEAN DEFAULT TRUE,
+    last_used_at TIMESTAMPTZ,
+    expires_at TIMESTAMPTZ,
+    created_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+CREATE INDEX IF NOT EXISTS idx_api_keys_org ON api_keys(org_id);
+CREATE INDEX IF NOT EXISTS idx_api_keys_hash ON api_keys(key_hash);
+
 -- Planos padrão
 INSERT INTO plans (name, display_name, price_monthly, price_yearly, max_conversations, max_messages_month, max_members, max_quick_replies, max_groups, features) VALUES
 ('free', 'Gratuito', 0, 0, 50, 500, 2, 5, 3, '["basic_chat","quick_replies"]'),

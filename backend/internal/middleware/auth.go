@@ -78,3 +78,11 @@ func GetRole(ctx context.Context) string {
 	}
 	return ""
 }
+
+func WithOrgID(ctx context.Context, orgID string) context.Context {
+	return context.WithValue(ctx, OrgIDKey, orgID)
+}
+
+func WithUserID(ctx context.Context, userID string) context.Context {
+	return context.WithValue(ctx, UserIDKey, userID)
+}

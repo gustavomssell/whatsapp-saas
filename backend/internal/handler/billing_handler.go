@@ -1,13 +1,130 @@
 package handler
 
 import (
+	"crypto/rand"
+	"crypto/sha256"
+	"encoding/hex"
 	"encoding/json"
 	"net/http"
 	"time"
 
+	"github.com/go-chi/chi/v5"
 	"github.com/user/whatsapp-saas/internal/middleware"
 	"github.com/user/whatsapp-saas/internal/models"
 )
+
+func generateAPIKey() (string, string, string) {
+	bytes := make([]byte, 32)
+	rand.Read(bytes)
+	fullKey := "wps_" + hex.EncodeToString(bytes)
+	hash := sha256.Sum256([]byte(fullKey))
+	hashHex := hex.EncodeToString(hash[:])
+	prefix := fullKey[:7]
+	return fullKey, hashHex, prefix
+}
+
+func (h *Handler) CreateAPIKey(w http.ResponseWriter, r *http.Request) {
+	orgID := middleware.GetOrgID(r.Context())
+
+	var body struct {
+		Name        string   `json:"name"`
+		Permissions []string `json:"permissions"`
+		RateLimit   int      `json:"rate_limit"`
+		ExpiresIn   int      `json:"expires_in_days"`
+	}
+	if err := json.NewDecoder(r.Body).Decode(&body); err != nil || body.Name == "" {
+		h.respondError(w, http.StatusBadRequest, "name é obrigatório")
+		return
+	}
+
+	_, plan, _ := h.billing.GetOrgSubscription(r.Context(), orgID)
+	if plan != nil && plan.Name != "enterprise" {
+		h.respondError(w, http.StatusForbidden, "API keys disponíveis apenas no plano Empresarial")
+		return
+	}
+
+	if body.Permissions == nil {
+		body.Permissions = []string{"read"}
+	}
+	if body.RateLimit <= 0 {
+		body.RateLimit = 100
+	}
+
+	fullKey, hashHex, prefix := generateAPIKey()
+	perms, _ := json.Marshal(body.Permissions)
+
+	key := &models.APIKey{
+		OrgID:       orgID,
+		Name:        body.Name,
+		KeyHash:     hashHex,
+		KeyPrefix:   prefix,
+		Permissions: perms,
+		RateLimit:   body.RateLimit,
+		IsActive:    true,
+	}
+	if body.ExpiresIn > 0 {
+		exp := time.Now().AddDate(0, 0, body.ExpiresIn)
+		key.ExpiresAt = &exp
+	}
+
+	if err := h.billing.CreateAPIKey(r.Context(), key); err != nil {
+		h.respondError(w, http.StatusInternalServerError, err.Error())
+		return
+	}
+
+	h.respondJSON(w, http.StatusCreated, map[string]interface{}{
+		"id":         key.ID,
+		"name":       key.Name,
+		"api_key":    fullKey,
+		"key_prefix": prefix,
+		"message":    " guarde esta chave. Ela não será exibida novamente.",
+	})
+}
+
+func (h *Handler) ListAPIKeys(w http.ResponseWriter, r *http.Request) {
+	orgID := middleware.GetOrgID(r.Context())
+
+	keys, err := h.billing.ListAPIKeys(r.Context(), orgID)
+	if err != nil {
+		h.respondError(w, http.StatusInternalServerError, err.Error())
+		return
+	}
+	h.respondJSON(w, http.StatusOK, keys)
+}
+
+func (h *Handler) DeleteAPIKey(w http.ResponseWriter, r *http.Request) {
+	orgID := middleware.GetOrgID(r.Context())
+	keyID := chi.URLParam(r, "keyID")
+
+	if err := h.billing.DeleteAPIKey(r.Context(), orgID, keyID); err != nil {
+		h.respondError(w, http.StatusInternalServerError, err.Error())
+		return
+	}
+	h.respondJSON(w, http.StatusOK, map[string]string{"message": "chave deletada"})
+}
+
+func (h *Handler) APIKeyAuth(next http.Handler) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		apiKey := r.Header.Get("X-API-Key")
+		if apiKey == "" {
+			http.Error(w, `{"error":"X-API-Key header required"}`, http.StatusUnauthorized)
+			return
+		}
+
+		hash := sha256.Sum256([]byte(apiKey))
+		hashHex := hex.EncodeToString(hash[:])
+
+		key, orgID, err := h.billing.ValidateAPIKey(r.Context(), hashHex)
+		if err != nil {
+			http.Error(w, `{"error":"api key inválida ou expirada"}`, http.StatusUnauthorized)
+			return
+		}
+
+		ctx := middleware.WithOrgID(r.Context(), orgID)
+		ctx = middleware.WithUserID(ctx, key.ID)
+		next.ServeHTTP(w, r.WithContext(ctx))
+	})
+}
 
 func (h *Handler) ListPlans(w http.ResponseWriter, r *http.Request) {
 	plans, err := h.billing.GetPlans(r.Context())

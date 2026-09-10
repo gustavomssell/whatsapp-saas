@@ -2,6 +2,7 @@ package repository
 
 import (
 	"context"
+	"fmt"
 	"time"
 
 	"github.com/jackc/pgx/v5/pgxpool"
@@ -163,4 +164,64 @@ func (r *BillingRepo) GetOrgInvoices(ctx context.Context, orgID string, limit in
 		invoices = append(invoices, inv)
 	}
 	return invoices, nil
+}
+
+func (r *BillingRepo) CreateAPIKey(ctx context.Context, key *models.APIKey) error {
+	err := r.db.QueryRow(ctx,
+		`INSERT INTO api_keys (org_id, name, key_hash, key_prefix, permissions, rate_limit, expires_at)
+		 VALUES ($1, $2, $3, $4, $5, $6, $7)
+		 RETURNING id, created_at`,
+		key.OrgID, key.Name, key.KeyHash, key.KeyPrefix, key.Permissions, key.RateLimit, key.ExpiresAt,
+	).Scan(&key.ID, &key.CreatedAt)
+	return err
+}
+
+func (r *BillingRepo) ListAPIKeys(ctx context.Context, orgID string) ([]models.APIKey, error) {
+	rows, err := r.db.Query(ctx,
+		`SELECT id, org_id, name, key_prefix, permissions, rate_limit, is_active, last_used_at, expires_at, created_at
+		 FROM api_keys WHERE org_id = $1 ORDER BY created_at DESC`, orgID,
+	)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	var keys []models.APIKey
+	for rows.Next() {
+		var k models.APIKey
+		if err := rows.Scan(&k.ID, &k.OrgID, &k.Name, &k.KeyPrefix, &k.Permissions,
+			&k.RateLimit, &k.IsActive, &k.LastUsedAt, &k.ExpiresAt, &k.CreatedAt); err != nil {
+			return nil, err
+		}
+		keys = append(keys, k)
+	}
+	return keys, nil
+}
+
+func (r *BillingRepo) DeleteAPIKey(ctx context.Context, orgID, keyID string) error {
+	_, err := r.db.Exec(ctx,
+		`DELETE FROM api_keys WHERE org_id = $1 AND id = $2`, orgID, keyID,
+	)
+	return err
+}
+
+func (r *BillingRepo) ValidateAPIKey(ctx context.Context, keyHash string) (*models.APIKey, string, error) {
+	var k models.APIKey
+	var orgID string
+	err := r.db.QueryRow(ctx,
+		`SELECT id, org_id, name, key_prefix, permissions, rate_limit, is_active, last_used_at, expires_at, created_at
+		 FROM api_keys WHERE key_hash = $1 AND is_active = TRUE`, keyHash,
+	).Scan(&k.ID, &orgID, &k.Name, &k.KeyPrefix, &k.Permissions,
+		&k.RateLimit, &k.IsActive, &k.LastUsedAt, &k.ExpiresAt, &k.CreatedAt)
+	if err != nil {
+		return nil, "", err
+	}
+
+	if k.ExpiresAt != nil && k.ExpiresAt.Before(time.Now()) {
+		return nil, "", fmt.Errorf("api key expirada")
+	}
+
+	r.db.Exec(ctx, `UPDATE api_keys SET last_used_at = NOW() WHERE id = $1`, k.ID)
+
+	return &k, orgID, nil
 }
