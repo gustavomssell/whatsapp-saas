@@ -1,7 +1,8 @@
 import { useState, useEffect } from "react";
+import { useNavigate } from "react-router-dom";
 import { useAuthStore } from "@/store/authStore";
 import { api } from "@/services/api";
-import { QrCode, User, Zap, ArrowRight, Users } from "lucide-react";
+import { QrCode, User, Zap, ArrowRight, Users, CreditCard } from "lucide-react";
 
 interface Member {
   id: string;
@@ -11,12 +12,14 @@ interface Member {
 }
 
 export default function SettingsPage() {
+  const navigate = useNavigate();
   const { user } = useAuthStore();
   const [instanceName, setInstanceName] = useState("");
   const [status, setStatus] = useState<string | null>(null);
   const [qrCode, setQrCode] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   const [members, setMembers] = useState<Member[]>([]);
+  const [orgPlan, setOrgPlan] = useState<any>(null);
 
   const checkStatus = async () => {
     try {
@@ -30,6 +33,7 @@ export default function SettingsPage() {
   useEffect(() => {
     checkStatus();
     api.getMembers().then((res) => setMembers(res.data || [])).catch(console.error);
+    api.getOrgPlan().then((res) => setOrgPlan(res)).catch(console.error);
   }, []);
 
   const handleConnect = async () => {
@@ -173,6 +177,46 @@ export default function SettingsPage() {
               className="mx-auto rounded-xl border border-border max-w-[250px]"
             />
           </div>
+        )}
+      </div>
+
+      {/* Plan */}
+      <div className="rounded-2xl border border-border bg-card p-5 sm:p-6">
+        <div className="flex items-center gap-3 mb-5">
+          <div className="w-10 h-10 rounded-xl bg-primary/10 flex items-center justify-center">
+            <CreditCard className="h-5 w-5 text-primary" />
+          </div>
+          <h2 className="text-base font-semibold">Plano</h2>
+        </div>
+
+        {orgPlan ? (
+          <div className="space-y-4">
+            <div className="flex items-center justify-between py-2 border-b border-border/50">
+              <span className="text-sm text-muted-foreground">Plano Atual</span>
+              <span className="text-sm font-medium">{orgPlan.plan?.display_name || "Gratuito"}</span>
+            </div>
+            <div className="flex items-center justify-between py-2 border-b border-border/50">
+              <span className="text-sm text-muted-foreground">Status</span>
+              <span className={`text-xs px-2 py-0.5 rounded-full ${orgPlan.subscription?.status === "active" ? "bg-primary/20 text-primary" : "bg-muted text-muted-foreground"}`}>
+                {orgPlan.subscription?.status === "active" ? "Ativo" : orgPlan.subscription?.status || "Gratuito"}
+              </span>
+            </div>
+            <div className="flex items-center justify-between py-2">
+              <span className="text-sm text-muted-foreground">Mensagens este mês</span>
+              <span className="text-sm font-medium">
+                {orgPlan.usage?.messages_sent || 0} / {orgPlan.plan?.max_messages_month < 0 ? "∞" : orgPlan.plan?.max_messages_month || 500}
+              </span>
+            </div>
+            <button
+              onClick={() => navigate("/billing")}
+              className="w-full flex items-center justify-center gap-2 py-2 px-4 rounded-xl bg-primary/10 text-primary hover:bg-primary/20 transition-colors text-sm font-medium"
+            >
+              Gerenciar Plano
+              <ArrowRight className="h-4 w-4" />
+            </button>
+          </div>
+        ) : (
+          <p className="text-sm text-muted-foreground">Carregando...</p>
         )}
       </div>
 
