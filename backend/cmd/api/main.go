@@ -37,7 +37,7 @@ func main() {
 	evolutionClient := service.NewEvolutionClient(cfg.EvolutionAPIURL, cfg.EvolutionAPIKey)
 	whatsappRepo := repository.NewWhatsappRepo(pool)
 	billingRepo := repository.NewBillingRepo(pool)
-	whatsappService := service.NewWhatsappService(whatsappRepo, evolutionClient, hub)
+	whatsappService := service.NewWhatsappService(whatsappRepo, billingRepo, evolutionClient, hub)
 	uploadService := service.NewUploadService(cfg.UploadDir, cfg.UploadPublicURL, cfg.UploadMaxSizeMB)
 
 	h := handler.NewHandler(authService, whatsappService, whatsappRepo, billingRepo, uploadService, hub)

@@ -15,12 +15,13 @@ import (
 
 type WhatsappService struct {
 	repo      *repository.WhatsappRepo
+	billing   *repository.BillingRepo
 	evolution *EvolutionClient
 	hub       *socket.Hub
 }
 
-func NewWhatsappService(repo *repository.WhatsappRepo, evolution *EvolutionClient, hub *socket.Hub) *WhatsappService {
-	return &WhatsappService{repo: repo, evolution: evolution, hub: hub}
+func NewWhatsappService(repo *repository.WhatsappRepo, billing *repository.BillingRepo, evolution *EvolutionClient, hub *socket.Hub) *WhatsappService {
+	return &WhatsappService{repo: repo, billing: billing, evolution: evolution, hub: hub}
 }
 
 func (s *WhatsappService) Connect(ctx context.Context, orgID, instanceName, webhookURL string) (string, error) {
@@ -95,6 +96,10 @@ func (s *WhatsappService) SendMessage(ctx context.Context, orgID, jid, text, quo
 	}
 	if err := s.repo.InsertMessage(ctx, msg); err != nil {
 		log.Printf("[whatsapp] erro ao salvar msg: %v", err)
+	}
+
+	if s.billing != nil {
+		s.billing.IncrementUsage(ctx, orgID, "messages_sent", 1)
 	}
 
 	s.repo.UpsertConversationFromMe(ctx, &models.WhatsappConversation{
@@ -322,6 +327,10 @@ func (s *WhatsappService) handleIncoming(ctx context.Context, orgID, remoteJid, 
 	if err := s.repo.InsertMessage(ctx, msg); err != nil {
 		log.Printf("[whatsapp] erro ao salvar msg recebida: %v", err)
 		return
+	}
+
+	if s.billing != nil {
+		s.billing.IncrementUsage(ctx, orgID, "messages_received", 1)
 	}
 
 	s.broadcastNewMessage(orgID, remoteJid, msg)
