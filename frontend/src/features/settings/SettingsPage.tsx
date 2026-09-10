@@ -1,6 +1,7 @@
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { useTranslation } from "react-i18next";
+import { useQuery } from "@tanstack/react-query";
 import { useAuthStore } from "@/store/authStore";
 import { api } from "@/services/api";
 import { QrCode, User, Zap, ArrowRight, Users, CreditCard } from "lucide-react";
@@ -20,8 +21,16 @@ export default function SettingsPage() {
   const [status, setStatus] = useState<string | null>(null);
   const [qrCode, setQrCode] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
-  const [members, setMembers] = useState<Member[]>([]);
-  const [orgPlan, setOrgPlan] = useState<any>(null);
+
+  const { data: members = [] } = useQuery({
+    queryKey: ["members"],
+    queryFn: () => api.getMembers().then((res) => res.data || []),
+  });
+
+  const { data: orgPlan } = useQuery({
+    queryKey: ["org-plan"],
+    queryFn: () => api.getOrgPlan(),
+  });
 
   const checkStatus = async () => {
     try {
@@ -34,8 +43,6 @@ export default function SettingsPage() {
 
   useEffect(() => {
     checkStatus();
-    api.getMembers().then((res) => setMembers(res.data || [])).catch(console.error);
-    api.getOrgPlan().then((res) => setOrgPlan(res)).catch(console.error);
   }, []);
 
   const handleConnect = async () => {

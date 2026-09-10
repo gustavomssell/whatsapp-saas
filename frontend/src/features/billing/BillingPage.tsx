@@ -1,5 +1,6 @@
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { useTranslation } from "react-i18next";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { api } from "../../services/api";
 import { Check, Zap, Crown, Building2 } from "lucide-react";
 
@@ -41,52 +42,35 @@ const planIcons: Record<string, any> = {
 
 export default function BillingPage() {
   const { t } = useTranslation();
-  const [plans, setPlans] = useState<Plan[]>([]);
-  const [orgPlan, setOrgPlan] = useState<OrgPlanInfo | null>(null);
+  const queryClient = useQueryClient();
   const [billingCycle, setBillingCycle] = useState<"monthly" | "yearly">("monthly");
-  const [loading, setLoading] = useState(true);
-  const [subscribing, setSubscribing] = useState<string | null>(null);
 
-  useEffect(() => {
-    loadData();
-  }, []);
+  const { data: plans = [], isLoading: plansLoading } = useQuery({
+    queryKey: ["plans"],
+    queryFn: () => api.getPlans(),
+  });
 
-  const loadData = async () => {
-    try {
-      const [plansData, orgData] = await Promise.all([
-        api.getPlans(),
-        api.getOrgPlan(),
-      ]);
-      setPlans(plansData || []);
-      setOrgPlan(orgData);
-    } catch (err) {
-      console.error(err);
-    } finally {
-      setLoading(false);
-    }
-  };
+  const { data: orgPlan, isLoading: orgLoading } = useQuery({
+    queryKey: ["org-plan"],
+    queryFn: () => api.getOrgPlan(),
+  });
 
-  const handleSubscribe = async (planName: string) => {
-    setSubscribing(planName);
-    try {
-      await api.subscribePlan(planName, billingCycle);
-      await loadData();
-    } catch (err) {
-      console.error(err);
-    } finally {
-      setSubscribing(null);
-    }
-  };
+  const subscribeMutation = useMutation({
+    mutationFn: ({ planName, cycle }: { planName: string; cycle: string }) =>
+      api.subscribePlan(planName, cycle),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["org-plan"] });
+    },
+  });
 
-  const handleCancel = async () => {
-    if (!confirm(t("billing.cancelConfirm"))) return;
-    try {
-      await api.cancelSubscription();
-      await loadData();
-    } catch (err) {
-      console.error(err);
-    }
-  };
+  const cancelMutation = useMutation({
+    mutationFn: () => api.cancelSubscription(),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["org-plan"] });
+    },
+  });
+
+  const loading = plansLoading || orgLoading;
 
   if (loading) {
     return (
@@ -150,7 +134,11 @@ export default function BillingPage() {
           </div>
           {currentPlanName !== "free" && (
             <button
-              onClick={handleCancel}
+              onClick={() => {
+                if (confirm(t("billing.cancelConfirm"))) {
+                  cancelMutation.mutate();
+                }
+              }}
               className="mt-4 px-4 py-2 text-sm text-destructive hover:bg-destructive/10 rounded-lg transition-colors"
             >
               {t("billing.cancelSubscription")}
@@ -238,10 +226,10 @@ export default function BillingPage() {
                     ? "bg-primary text-background hover:opacity-90"
                     : "bg-card border border-border hover:bg-accent"
                 }`}
-                disabled={isCurrent || subscribing === plan.name}
-                onClick={() => handleSubscribe(plan.name)}
+                disabled={isCurrent || subscribeMutation.isPending}
+                onClick={() => subscribeMutation.mutate({ planName: plan.name, cycle: billingCycle })}
               >
-                {isCurrent ? t("billing.currentPlanButton") : subscribing === plan.name ? t("billing.processing") : t("billing.choosePlan")}
+                {isCurrent ? t("billing.currentPlanButton") : subscribeMutation.isPending ? t("billing.processing") : t("billing.choosePlan")}
               </button>
             </div>
           );

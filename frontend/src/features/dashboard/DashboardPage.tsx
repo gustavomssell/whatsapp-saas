@@ -1,5 +1,5 @@
-import { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
+import { useQuery } from "@tanstack/react-query";
 import { api } from "@/services/api";
 import { MessageSquare, Users, Send, Inbox, BarChart3, ArrowUpRight, Zap } from "lucide-react";
 
@@ -19,22 +19,19 @@ interface ChartPoint {
 
 export default function DashboardPage() {
   const { t } = useTranslation();
-  const [stats, setStats] = useState<Stats | null>(null);
-  const [chart, setChart] = useState<ChartPoint[]>([]);
-  const [loading, setLoading] = useState(true);
 
-  useEffect(() => {
-    Promise.all([
-      api.getDashboardStats(),
-      api.getDashboardChart(7),
-    ])
-      .then(([statsRes, chartRes]) => {
-        setStats(statsRes);
-        setChart(chartRes.data || []);
-      })
-      .catch(console.error)
-      .finally(() => setLoading(false));
-  }, []);
+  const { data: stats, isLoading: statsLoading } = useQuery({
+    queryKey: ["dashboard-stats"],
+    queryFn: () => api.getDashboardStats(),
+  });
+
+  const { data: chartData, isLoading: chartLoading } = useQuery({
+    queryKey: ["dashboard-chart", 7],
+    queryFn: () => api.getDashboardChart(7),
+  });
+
+  const chart = chartData?.data || [];
+  const loading = statsLoading || chartLoading;
 
   const cards = stats
     ? [
