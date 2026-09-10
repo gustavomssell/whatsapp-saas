@@ -2,7 +2,6 @@ package service
 
 import (
 	"context"
-	"crypto/rand"
 	"encoding/json"
 	"fmt"
 	"log"
@@ -244,19 +243,7 @@ func (s *WhatsappService) handleMessagesUpsert(ctx context.Context, orgIDHint st
 				if mediaURL != "" {
 					msgType = "media"
 					content = "[" + mediaType + "]"
-func (s *WhatsappService) RotateConversationKey(ctx context.Context, conversationID string) (string, string, error) {
-	orgID := middleware.GetOrgID(ctx)
-	newKeyID := "k1_" + conversationID[:8]
-	publicKey, err := makeRandBytes(32)
-	if err != nil {
-		return "", "", err
-	}
-	// Store the key
-	if err := s.repo.CreateConversationKey(ctx, orgID, conversationID, newKeyID, string(publicKey)); err != nil {
-		return "", "", err
-	}
-	return string(publicKey), newKeyID, nil
-}
+				}
 			}
 		}
 
@@ -465,14 +452,7 @@ func extractMediaFromMessage(msg map[string]interface{}) (string, string) {
 	return "", ""
 }
 
-func makeRandBytes(n int) ([]byte, error) {
-	b := make([]byte, n)
-	_, err := rand.Read(b)
-	if err != nil {
-		return nil, err
-	}
-	return b, nil
-}
+
 
 func jidToPhone(jid string) string {
 	parts := strings.Split(jid, "@")
