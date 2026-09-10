@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { useTranslation } from "react-i18next";
 import { api } from "@/services/api";
 import { MessageSquare, Users, Send, Inbox, BarChart3, ArrowUpRight, Zap } from "lucide-react";
 
@@ -17,6 +18,7 @@ interface ChartPoint {
 }
 
 export default function DashboardPage() {
+  const { t } = useTranslation();
   const [stats, setStats] = useState<Stats | null>(null);
   const [chart, setChart] = useState<ChartPoint[]>([]);
   const [loading, setLoading] = useState(true);
@@ -37,35 +39,35 @@ export default function DashboardPage() {
   const cards = stats
     ? [
         {
-          label: "Conversas",
+          label: t("common.conversations"),
           value: stats.total_conversations,
           icon: MessageSquare,
           color: "text-primary",
           bg: "bg-primary/10",
         },
         {
-          label: "Nao lidas",
+          label: t("inbox.noMessages"),
           value: stats.unread_conversations,
           icon: Inbox,
           color: "text-amber-500",
           bg: "bg-amber-500/10",
         },
         {
-          label: "Enviados hoje",
+          label: t("dashboard.messagesSent"),
           value: stats.messages_sent_today,
           icon: Send,
           color: "text-blue-500",
           bg: "bg-blue-500/10",
         },
         {
-          label: "Recebidos hoje",
+          label: t("dashboard.messagesReceived"),
           value: stats.messages_received_today,
           icon: BarChart3,
           color: "text-purple-500",
           bg: "bg-purple-500/10",
         },
         {
-          label: "Grupos ativos",
+          label: t("common.groups"),
           value: stats.active_groups,
           icon: Users,
           color: "text-cyan-500",
@@ -87,9 +89,9 @@ export default function DashboardPage() {
   return (
     <div className="p-4 sm:p-6 lg:p-8 space-y-6 sm:space-y-8 max-w-7xl mx-auto">
       <div>
-        <h1 className="text-xl sm:text-2xl font-semibold tracking-tight">Visao Geral</h1>
+        <h1 className="text-xl sm:text-2xl font-semibold tracking-tight">{t("dashboard.title")}</h1>
         <p className="text-sm text-muted-foreground mt-1">
-          Acompanhe o desempenho das suas comunicacoes
+          {t("dashboard.subtitle")}
         </p>
       </div>
 
@@ -111,24 +113,23 @@ export default function DashboardPage() {
         ))}
       </div>
 
-      {/* Chart */}
       {chart.length > 0 && (
         <div className="rounded-2xl border border-border bg-card p-5 sm:p-6">
           <div className="flex items-center justify-between mb-6">
             <div>
-              <h2 className="text-base font-semibold">Mensagens (7 dias)</h2>
+              <h2 className="text-base font-semibold">{t("dashboard.messagesChart")}</h2>
               <p className="text-xs text-muted-foreground mt-0.5">
-                Enviadas vs Recebidas
+                {t("dashboard.sent")} vs {t("dashboard.received")}
               </p>
             </div>
             <div className="flex items-center gap-4 text-xs">
               <div className="flex items-center gap-1.5">
                 <div className="w-2.5 h-2.5 rounded-full bg-primary" />
-                <span className="text-muted-foreground">Enviadas</span>
+                <span className="text-muted-foreground">{t("dashboard.sent")}</span>
               </div>
               <div className="flex items-center gap-1.5">
                 <div className="w-2.5 h-2.5 rounded-full bg-purple-500" />
-                <span className="text-muted-foreground">Recebidas</span>
+                <span className="text-muted-foreground">{t("dashboard.received")}</span>
               </div>
             </div>
           </div>
@@ -145,12 +146,12 @@ export default function DashboardPage() {
                     <div
                       className="flex-1 bg-primary rounded-t-md transition-all duration-500 hover:opacity-80"
                       style={{ height: `${Math.max(sentHeight, 2)}%` }}
-                      title={`Enviadas: ${point.sent}`}
+                      title={`${t("dashboard.sent")}: ${point.sent}`}
                     />
                     <div
                       className="flex-1 bg-purple-500 rounded-t-md transition-all duration-500 hover:opacity-80"
                       style={{ height: `${Math.max(receivedHeight, 2)}%` }}
-                      title={`Recebidas: ${point.received}`}
+                      title={`${t("dashboard.received")}: ${point.received}`}
                     />
                   </div>
                   <span className="text-[10px] text-muted-foreground capitalize">{dayLabel}</span>
@@ -169,8 +170,7 @@ export default function DashboardPage() {
           <div>
             <h3 className="font-semibold mb-1">WhatsApp SaaS</h3>
             <p className="text-sm text-muted-foreground leading-relaxed">
-              Gerencie suas comunicacoes profissionais de forma inteligente.
-              Conecte seu WhatsApp, organize conversas, atribua equipes e acompanhe metricas em tempo real.
+              {t("dashboard.subtitle")}
             </p>
           </div>
         </div>
