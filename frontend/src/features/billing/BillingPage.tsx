@@ -4,35 +4,6 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { api } from "../../services/api";
 import { Check, Zap, Crown, Building2 } from "lucide-react";
 
-interface Plan {
-  id: string;
-  name: string;
-  display_name: string;
-  price_monthly: number;
-  price_yearly: number;
-  max_conversations: number;
-  max_messages_month: number;
-  max_members: number;
-  max_quick_replies: number;
-  max_groups: number;
-  features: string[];
-}
-
-interface OrgPlanInfo {
-  plan: Plan;
-  subscription: {
-    status: string;
-    billing_cycle: string;
-    current_period_end: string;
-  };
-  usage: {
-    messages_sent: number;
-    messages_received: number;
-    conversations_active: number;
-    members_count: number;
-  };
-}
-
 const planIcons: Record<string, any> = {
   free: Zap,
   starter: Zap,

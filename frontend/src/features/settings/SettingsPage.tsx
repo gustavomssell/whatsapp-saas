@@ -6,13 +6,6 @@ import { useAuthStore } from "@/store/authStore";
 import { api } from "@/services/api";
 import { QrCode, User, Zap, ArrowRight, Users, CreditCard } from "lucide-react";
 
-interface Member {
-  id: string;
-  name: string;
-  email: string;
-  role: string;
-}
-
 export default function SettingsPage() {
   const { t } = useTranslation();
   const navigate = useNavigate();

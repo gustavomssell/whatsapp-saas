@@ -3,20 +3,6 @@ import { useQuery } from "@tanstack/react-query";
 import { api } from "@/services/api";
 import { MessageSquare, Users, Send, Inbox, BarChart3, ArrowUpRight, Zap } from "lucide-react";
 
-interface Stats {
-  total_conversations: number;
-  unread_conversations: number;
-  messages_sent_today: number;
-  messages_received_today: number;
-  active_groups: number;
-}
-
-interface ChartPoint {
-  date: string;
-  sent: number;
-  received: number;
-}
-
 export default function DashboardPage() {
   const { t } = useTranslation();
 
