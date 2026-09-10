@@ -238,6 +238,23 @@ func (s *WhatsappService) handleMessagesUpsert(ctx context.Context, orgIDHint st
 			} else if extText, ok := msgContent["extendedTextMessage"].(map[string]interface{}); ok {
 				content, _ = extText["text"].(string)
 				msgType = "text"
+			} else if locMsg, ok := msgContent["locationMessage"].(map[string]interface{}); ok {
+				lat, _ := locMsg["degreesLatitude"].(float64)
+				lng, _ := locMsg["degreesLongitude"].(float64)
+				content = fmt.Sprintf("[location:%.6f,%.6f]", lat, lng)
+				msgType = "location"
+			} else if contactMsg, ok := msgContent["contactMessage"].(map[string]interface{}); ok {
+				displayName, _ := contactMsg["displayName"].(string)
+				vcard, _ := contactMsg["vcard"].(string)
+				content = fmt.Sprintf("[contact:%s]", displayName)
+				if vcard != "" {
+					content = fmt.Sprintf("[contact:%s|%s]", displayName, vcard)
+				}
+				msgType = "contact"
+			} else if pollMsg, ok := msgContent["pollCreationMessage"].(map[string]interface{}); ok {
+				pollName, _ := pollMsg["name"].(string)
+				content = fmt.Sprintf("[poll:%s]", pollName)
+				msgType = "poll"
 			} else {
 				mediaURL, mediaType = extractMediaFromMessage(msgContent)
 				if mediaURL != "" {

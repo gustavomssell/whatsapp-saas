@@ -873,6 +873,47 @@ export default function InboxPage() {
                             </div>
                           )}
 
+                          {msg.msg_type === "location" && !msg.is_deleted && (
+                            <div className="mb-2 p-3 bg-primary/10 rounded-xl">
+                              <div className="flex items-center gap-2 text-sm text-foreground">
+                                <svg className="h-4 w-4 text-primary" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                                  <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z" />
+                                  <circle cx="12" cy="10" r="3" />
+                                </svg>
+                                Localização
+                              </div>
+                              <p className="text-xs text-muted-foreground mt-1">{msg.content}</p>
+                            </div>
+                          )}
+
+                          {msg.msg_type === "contact" && !msg.is_deleted && (
+                            <div className="mb-2 p-3 bg-primary/10 rounded-xl">
+                              <div className="flex items-center gap-2 text-sm text-foreground">
+                                <svg className="h-4 w-4 text-primary" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                                  <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2" />
+                                  <circle cx="12" cy="7" r="4" />
+                                </svg>
+                                Contato
+                              </div>
+                              <p className="text-xs text-muted-foreground mt-1">{msg.content}</p>
+                            </div>
+                          )}
+
+                          {msg.msg_type === "poll" && !msg.is_deleted && (
+                            <div className="mb-2 p-3 bg-primary/10 rounded-xl">
+                              <div className="flex items-center gap-2 text-sm text-foreground">
+                                <svg className="h-4 w-4 text-primary" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                                  <path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2" />
+                                  <circle cx="9" cy="7" r="4" />
+                                  <path d="M22 21v-2a4 4 0 0 0-3-3.87" />
+                                  <path d="M16 3.13a4 4 0 0 1 0 7.75" />
+                                </svg>
+                                Enquete
+                              </div>
+                              <p className="text-xs text-muted-foreground mt-1">{msg.content}</p>
+                            </div>
+                          )}
+
                           {msg.msg_type === "media" && msg.media_url && !msg.is_deleted && (
                             <div className="mb-2">
                               {msg.media_type?.startsWith("image/") ? (
