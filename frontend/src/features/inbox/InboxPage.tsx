@@ -103,6 +103,12 @@ export default function InboxPage() {
   const [showTagModal, setShowTagModal] = useState(false);
   const [showEmojiPicker, setShowEmojiPicker] = useState<string | null>(null);
   const [showDeleteModal, setShowDeleteModal] = useState<string | null>(null);
+  const [showForwardModal, setShowForwardModal] = useState<string | null>(null);
+  const [forwardSearch, setForwardSearch] = useState("");
+  const [forwardResults, setForwardResults] = useState<Conversation[]>([]);
+  const [chatSearch, setChatSearch] = useState("");
+  const [chatSearchResults, setChatSearchResults] = useState<any[]>([]);
+  const [showChatSearch, setShowChatSearch] = useState(false);
 
   // Guide/Tags
   const [members, setMembers] = useState<Member[]>([]);
@@ -351,6 +357,45 @@ export default function InboxPage() {
         )
       );
       setShowDeleteModal(null);
+    } catch (err) {
+      console.error(err);
+    }
+  };
+
+  const handleForwardMessage = async (targetJid: string) => {
+    if (!showForwardModal || !targetJid) return;
+    try {
+      await api.forwardMessage(targetJid, showForwardModal);
+      setShowForwardModal(null);
+      setForwardSearch("");
+    } catch (err) {
+      console.error(err);
+    }
+  };
+
+  const handleSearchForward = async (query: string) => {
+    setForwardSearch(query);
+    if (query.length < 2) {
+      setForwardResults([]);
+      return;
+    }
+    try {
+      const res = await api.getConversations({ search: query });
+      setForwardResults(res.data || []);
+    } catch (err) {
+      console.error(err);
+    }
+  };
+
+  const handleChatSearch = async (query: string) => {
+    setChatSearch(query);
+    if (query.length < 2 || !selectedConv) {
+      setChatSearchResults([]);
+      return;
+    }
+    try {
+      const results = await api.searchMessages(selectedConv.jid, query);
+      setChatSearchResults(results || []);
     } catch (err) {
       console.error(err);
     }
@@ -735,8 +780,41 @@ export default function InboxPage() {
                 >
                   <Archive className="h-4 w-4" />
                 </button>
+                <button
+                  onClick={() => setShowChatSearch(!showChatSearch)}
+                  className="p-2 rounded-lg hover:bg-accent text-muted-foreground"
+                  title="Buscar na conversa"
+                >
+                  <Search className="h-4 w-4" />
+                </button>
               </div>
             </div>
+
+            {showChatSearch && (
+              <div className="px-4 py-2 border-b border-border">
+                <div className="flex gap-2">
+                  <input
+                    type="text"
+                    placeholder="Buscar na conversa..."
+                    value={chatSearch}
+                    onChange={(e) => handleChatSearch(e.target.value)}
+                    autoFocus
+                    className="flex-1 bg-input border border-border rounded-lg px-3 py-1.5 text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:border-primary"
+                  />
+                  <button
+                    onClick={() => { setShowChatSearch(false); setChatSearch(""); setChatSearchResults([]); }}
+                    className="p-1.5 rounded-lg hover:bg-accent text-muted-foreground"
+                  >
+                    <X className="h-4 w-4" />
+                  </button>
+                </div>
+                {chatSearchResults.length > 0 && (
+                  <div className="mt-2 text-xs text-muted-foreground">
+                    {chatSearchResults.length} resultado(s) encontrado(s)
+                  </div>
+                )}
+              </div>
+            )}
 
             <div className="flex flex-1 min-h-0">
               {/* Messages */}
@@ -874,6 +952,17 @@ export default function InboxPage() {
                                   <path d="M3 10h10a8 8 0 0 1 8 8v2M3 10l6 6m-6-6l6-6" />
                                 </svg>
                               </button>
+                              {!msg.is_deleted && (
+                                <button
+                                  onClick={() => setShowForwardModal(msg.remote_msg_id)}
+                                  className="p-1 rounded hover:bg-accent text-muted-foreground"
+                                  title="Encaminhar"
+                                >
+                                  <svg className="h-3.5 w-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                                    <path d="M22 2L11 13M22 2l-7 20-4-9-9-4 20-7z" />
+                                  </svg>
+                                </button>
+                              )}
                               {msg.from_me && (
                                 <>
                                   <button
@@ -1087,6 +1176,52 @@ export default function InboxPage() {
                 </div>
               )}
             </div>
+
+            {/* Forward Message Modal */}
+            {showForwardModal && (
+              <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm">
+                <div className="bg-card border border-border rounded-2xl shadow-xl w-full max-w-md p-5">
+                  <h3 className="text-base font-semibold mb-3">Encaminhar mensagem</h3>
+                  <input
+                    type="text"
+                    placeholder="Buscar conversa de destino..."
+                    value={forwardSearch}
+                    onChange={(e) => handleSearchForward(e.target.value)}
+                    autoFocus
+                    className="w-full bg-input border border-border rounded-lg px-3 py-2 text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:border-primary mb-3"
+                  />
+                  <div className="max-h-60 overflow-y-auto space-y-1">
+                    {forwardResults.map((c) => (
+                      <button
+                        key={c.id}
+                        onClick={() => handleForwardMessage(c.jid)}
+                        className="w-full flex items-center gap-3 p-2 rounded-lg hover:bg-accent text-left"
+                      >
+                        <Avatar className="h-8 w-8">
+                          <AvatarFallback className="bg-primary/10 text-primary text-xs">
+                            {(c.name || c.jid).slice(0, 2).toUpperCase()}
+                          </AvatarFallback>
+                        </Avatar>
+                        <div className="min-w-0">
+                          <div className="text-sm font-medium truncate">{c.name || c.jid}</div>
+                        </div>
+                      </button>
+                    ))}
+                    {forwardSearch.length >= 2 && forwardResults.length === 0 && (
+                      <p className="text-sm text-muted-foreground text-center py-4">Nenhuma conversa encontrada</p>
+                    )}
+                  </div>
+                  <div className="flex justify-end mt-4">
+                    <button
+                      onClick={() => { setShowForwardModal(null); setForwardSearch(""); setForwardResults([]); }}
+                      className="px-4 py-2 text-sm text-muted-foreground hover:text-foreground"
+                    >
+                      Cancelar
+                    </button>
+                  </div>
+                </div>
+              </div>
+            )}
 
             {/* Delete Message Modal */}
             {showDeleteModal && (
