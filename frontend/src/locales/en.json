@@ -156,6 +156,7 @@
     "monthlyBilling": "Monthly",
     "yearlyBilling": "Annual (2 months free)",
     "cancelSubscription": "Cancel Subscription",
+    "cancelConfirm": "Are you sure you want to cancel your subscription?",
     "choosePlan": "Choose Plan",
     "currentPlanButton": "Current Plan",
     "processing": "Processing...",

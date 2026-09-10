@@ -1,4 +1,5 @@
 import { useState, useEffect } from "react";
+import { useTranslation } from "react-i18next";
 import { api } from "../../services/api";
 import { Check, Zap, Crown, Building2 } from "lucide-react";
 
@@ -39,6 +40,7 @@ const planIcons: Record<string, any> = {
 };
 
 export default function BillingPage() {
+  const { t } = useTranslation();
   const [plans, setPlans] = useState<Plan[]>([]);
   const [orgPlan, setOrgPlan] = useState<OrgPlanInfo | null>(null);
   const [billingCycle, setBillingCycle] = useState<"monthly" | "yearly">("monthly");
@@ -77,7 +79,7 @@ export default function BillingPage() {
   };
 
   const handleCancel = async () => {
-    if (!confirm("Tem certeza que deseja cancelar sua assinatura?")) return;
+    if (!confirm(t("billing.cancelConfirm"))) return;
     try {
       await api.cancelSubscription();
       await loadData();
@@ -99,21 +101,21 @@ export default function BillingPage() {
   return (
     <div className="p-6 max-w-6xl mx-auto space-y-8">
       <div>
-        <h1 className="text-2xl font-bold">Planos e Assinatura</h1>
-        <p className="text-muted-foreground mt-1">Escolha o plano ideal para o seu negócio</p>
+        <h1 className="text-2xl font-bold">{t("billing.title")}</h1>
+        <p className="text-muted-foreground mt-1">{t("billing.subtitle")}</p>
       </div>
 
       {orgPlan && (
         <div className="border border-primary/30 rounded-2xl p-6 bg-card">
           <h2 className="text-lg font-semibold flex items-center gap-2">
-            Plano Atual: {orgPlan.plan.display_name}
+            {t("billing.currentPlan")} {orgPlan.plan.display_name}
             <span className={`text-xs px-2 py-0.5 rounded-full ${orgPlan.subscription?.status === "active" ? "bg-primary/20 text-primary" : "bg-destructive/20 text-destructive"}`}>
-              {orgPlan.subscription?.status === "active" ? "Ativo" : orgPlan.subscription?.status}
+              {orgPlan.subscription?.status === "active" ? t("common.active") : orgPlan.subscription?.status}
             </span>
           </h2>
           <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mt-4">
             <div>
-              <p className="text-sm text-muted-foreground">Mensagens</p>
+              <p className="text-sm text-muted-foreground">{t("billing.messagesLimit", { count: orgPlan.plan.max_messages_month })}</p>
               <p className="text-lg font-semibold">
                 {orgPlan.usage?.messages_sent || 0}
                 <span className="text-sm text-muted-foreground">
@@ -122,7 +124,7 @@ export default function BillingPage() {
               </p>
             </div>
             <div>
-              <p className="text-sm text-muted-foreground">Conversas</p>
+              <p className="text-sm text-muted-foreground">{t("billing.conversationsLimit", { count: orgPlan.plan.max_conversations })}</p>
               <p className="text-lg font-semibold">
                 {orgPlan.usage?.conversations_active || 0}
                 <span className="text-sm text-muted-foreground">
@@ -131,7 +133,7 @@ export default function BillingPage() {
               </p>
             </div>
             <div>
-              <p className="text-sm text-muted-foreground">Membros</p>
+              <p className="text-sm text-muted-foreground">{t("billing.membersLimit", { count: orgPlan.plan.max_members })}</p>
               <p className="text-lg font-semibold">
                 {orgPlan.usage?.members_count || 0}
                 <span className="text-sm text-muted-foreground">
@@ -140,9 +142,9 @@ export default function BillingPage() {
               </p>
             </div>
             <div>
-              <p className="text-sm text-muted-foreground">Ciclo</p>
+              <p className="text-sm text-muted-foreground">{t("billing.cycle")}</p>
               <p className="text-lg font-semibold">
-                {orgPlan.subscription?.billing_cycle === "yearly" ? "Anual" : "Mensal"}
+                {orgPlan.subscription?.billing_cycle === "yearly" ? t("common.yearly") : t("common.monthly")}
               </p>
             </div>
           </div>
@@ -151,7 +153,7 @@ export default function BillingPage() {
               onClick={handleCancel}
               className="mt-4 px-4 py-2 text-sm text-destructive hover:bg-destructive/10 rounded-lg transition-colors"
             >
-              Cancelar Assinatura
+              {t("billing.cancelSubscription")}
             </button>
           )}
         </div>
@@ -164,7 +166,7 @@ export default function BillingPage() {
             billingCycle === "monthly" ? "bg-primary text-background" : "bg-card border border-border hover:bg-accent"
           }`}
         >
-          Mensal
+          {t("billing.monthlyBilling")}
         </button>
         <button
           onClick={() => setBillingCycle("yearly")}
@@ -172,7 +174,7 @@ export default function BillingPage() {
             billingCycle === "yearly" ? "bg-primary text-background" : "bg-card border border-border hover:bg-accent"
           }`}
         >
-          Anual (2 meses grátis)
+          {t("billing.yearlyBilling")}
         </button>
       </div>
 
@@ -192,7 +194,7 @@ export default function BillingPage() {
               {plan.name === "professional" && (
                 <div className="absolute -top-3 left-1/2 -translate-x-1/2">
                   <span className="bg-primary text-background text-xs px-3 py-1 rounded-full font-medium">
-                    Mais Popular
+                    {t("billing.mostPopular")}
                   </span>
                 </div>
               )}
@@ -202,10 +204,10 @@ export default function BillingPage() {
                 </div>
                 <h3 className="text-lg font-semibold">{plan.display_name}</h3>
                 <div className="text-3xl font-bold mt-2">
-                  {price === 0 ? "Grátis" : `R$ ${price.toFixed(2)}`}
+                  {price === 0 ? t("common.free") : `R$ ${price.toFixed(2)}`}
                   {price > 0 && (
                     <span className="text-sm text-muted-foreground font-normal">
-                      /{billingCycle === "monthly" ? "mês" : "ano"}
+                      /{billingCycle === "monthly" ? t("common.per_month") : t("common.per_year")}
                     </span>
                   )}
                 </div>
@@ -213,19 +215,19 @@ export default function BillingPage() {
               <ul className="space-y-2 text-sm mt-6">
                 <li className="flex items-center gap-2">
                   <Check className="h-4 w-4 text-primary shrink-0" />
-                  <span>{plan.max_conversations < 0 ? "Conversas ilimitadas" : `${plan.max_conversations} conversas`}</span>
+                  <span>{plan.max_conversations < 0 ? t("common.unlimited") : t("billing.conversationsLimit", { count: plan.max_conversations })}</span>
                 </li>
                 <li className="flex items-center gap-2">
                   <Check className="h-4 w-4 text-primary shrink-0" />
-                  <span>{plan.max_messages_month < 0 ? "Mensagens ilimitadas" : `${plan.max_messages_month} mensagens/mês`}</span>
+                  <span>{plan.max_messages_month < 0 ? t("common.unlimited") : t("billing.messagesLimit", { count: plan.max_messages_month })}</span>
                 </li>
                 <li className="flex items-center gap-2">
                   <Check className="h-4 w-4 text-primary shrink-0" />
-                  <span>{plan.max_members < 0 ? "Membros ilimitados" : `${plan.max_members} membros`}</span>
+                  <span>{plan.max_members < 0 ? t("common.unlimited") : t("billing.membersLimit", { count: plan.max_members })}</span>
                 </li>
                 <li className="flex items-center gap-2">
                   <Check className="h-4 w-4 text-primary shrink-0" />
-                  <span>{plan.max_groups < 0 ? "Grupos ilimitados" : `${plan.max_groups} grupos`}</span>
+                  <span>{plan.max_groups < 0 ? t("common.unlimited") : t("billing.groupsLimit", { count: plan.max_groups })}</span>
                 </li>
               </ul>
               <button
@@ -239,7 +241,7 @@ export default function BillingPage() {
                 disabled={isCurrent || subscribing === plan.name}
                 onClick={() => handleSubscribe(plan.name)}
               >
-                {isCurrent ? "Plano Atual" : subscribing === plan.name ? "Processando..." : "Escolher Plano"}
+                {isCurrent ? t("billing.currentPlanButton") : subscribing === plan.name ? t("billing.processing") : t("billing.choosePlan")}
               </button>
             </div>
           );
