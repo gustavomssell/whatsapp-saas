@@ -99,9 +99,9 @@ export const api = {
     }),
 
   updateMessageContent: (remoteMsgID: string, content: string) =>
-    request<any>(`/whatsapp/conversations/${encodeURIComponent(remoteMsgID)}/content`, {
+    request<any>(`/whatsapp/conversations/edit`, {
       method: "POST",
-      body: JSON.stringify({ content }),
+      body: JSON.stringify({ msg_id: remoteMsgID, text: content }),
     }),
 
   connectWhatsApp: (instanceName: string, webhookUrl: string) =>
@@ -151,6 +151,12 @@ export const api = {
 
   searchMessages: (jid: string, query: string) =>
     request<any[]>(`/whatsapp/conversations/${encodeURIComponent(jid)}/search?q=${encodeURIComponent(query)}`),
+
+  editMessage: (jid: string, msgId: string, text: string) =>
+    request<any>(`/whatsapp/conversations/${encodeURIComponent(jid)}/edit`, {
+      method: "POST",
+      body: JSON.stringify({ msg_id: msgId, text }),
+    }),
 
   getTagColors: () =>
     request<any[]>("/whatsapp/tag-colors"),

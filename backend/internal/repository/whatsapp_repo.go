@@ -123,7 +123,7 @@ func (r *WhatsappRepo) ListConversations(ctx context.Context, orgID string, limi
 
 func (r *WhatsappRepo) ListMessages(ctx context.Context, conversationID string, limit int) ([]models.WhatsappMessage, error) {
 	rows, err := r.db.Query(ctx,
-		`SELECT id, conversation_id, org_id, remote_msg_id, sender, sender_name, content, msg_type, media_url, media_type, from_me, is_group, status, reactions, quoted_msg_id, is_edited, is_deleted, deleted_for, timestamp, created_at
+		`SELECT id, conversation_id, org_id, remote_msg_id, sender, sender_name, content, msg_type, media_url, media_type, from_me, is_group, status, reactions, quoted_msg_id, is_edited, edit_history, is_deleted, deleted_for, timestamp, created_at
 		 FROM (SELECT * FROM whatsapp_messages WHERE conversation_id = $1 AND is_deleted = FALSE ORDER BY timestamp DESC LIMIT $2) sub
 		 ORDER BY timestamp ASC`, conversationID, limit,
 	)
@@ -137,7 +137,7 @@ func (r *WhatsappRepo) ListMessages(ctx context.Context, conversationID string, 
 		var m models.WhatsappMessage
 		if err := rows.Scan(&m.ID, &m.ConversationID, &m.OrgID, &m.RemoteMsgID, &m.Sender, &m.SenderName,
 			&m.Content, &m.MsgType, &m.MediaURL, &m.MediaType, &m.FromMe, &m.IsGroup,
-			&m.Status, &m.Reactions, &m.QuotedMsgID, &m.IsEdited, &m.IsDeleted, &m.DeletedFor, &m.Timestamp, &m.CreatedAt); err != nil {
+			&m.Status, &m.Reactions, &m.QuotedMsgID, &m.IsEdited, &m.EditHistory, &m.IsDeleted, &m.DeletedFor, &m.Timestamp, &m.CreatedAt); err != nil {
 			return nil, err
 		}
 		msgs = append(msgs, m)
@@ -384,7 +384,7 @@ func (r *WhatsappRepo) DeleteQuickReply(ctx context.Context, orgID, qrID string)
 func (r *WhatsappRepo) FindMessageByRemoteID(ctx context.Context, orgID, remoteMsgID string) (*models.WhatsappMessage, error) {
 	var m models.WhatsappMessage
 	err := r.db.QueryRow(ctx,
-		`SELECT id, conversation_id, org_id, remote_msg_id, sender, sender_name, content, msg_type, media_url, media_type, from_me, is_group, status, reactions, quoted_msg_id, is_edited, is_deleted, deleted_for, timestamp, created_at
+		`SELECT id, conversation_id, org_id, remote_msg_id, sender, sender_name, content, msg_type, media_url, media_type, from_me, is_group, status, reactions, quoted_msg_id, is_edited, edit_history, is_deleted, deleted_for, timestamp, created_at
 		 FROM whatsapp_messages WHERE org_id = $1 AND remote_msg_id = $2`, orgID, remoteMsgID,
 	).Scan(&m.ID, &m.ConversationID, &m.OrgID, &m.RemoteMsgID, &m.Sender, &m.SenderName,
 		&m.Content, &m.MsgType, &m.MediaURL, &m.MediaType, &m.FromMe, &m.IsGroup,
@@ -397,7 +397,7 @@ func (r *WhatsappRepo) FindMessageByRemoteID(ctx context.Context, orgID, remoteM
 
 func (r *WhatsappRepo) SearchMessages(ctx context.Context, conversationID, query string, limit int) ([]models.WhatsappMessage, error) {
 	rows, err := r.db.Query(ctx,
-		`SELECT id, conversation_id, org_id, remote_msg_id, sender, sender_name, content, msg_type, media_url, media_type, from_me, is_group, status, reactions, quoted_msg_id, is_edited, is_deleted, deleted_for, timestamp, created_at
+		`SELECT id, conversation_id, org_id, remote_msg_id, sender, sender_name, content, msg_type, media_url, media_type, from_me, is_group, status, reactions, quoted_msg_id, is_edited, edit_history, is_deleted, deleted_for, timestamp, created_at
 		 FROM whatsapp_messages
 		 WHERE conversation_id = $1 AND is_deleted = FALSE AND content ILIKE $2
 		 ORDER BY timestamp DESC LIMIT $3`,
@@ -413,7 +413,7 @@ func (r *WhatsappRepo) SearchMessages(ctx context.Context, conversationID, query
 		var m models.WhatsappMessage
 		if err := rows.Scan(&m.ID, &m.ConversationID, &m.OrgID, &m.RemoteMsgID, &m.Sender, &m.SenderName,
 			&m.Content, &m.MsgType, &m.MediaURL, &m.MediaType, &m.FromMe, &m.IsGroup,
-			&m.Status, &m.Reactions, &m.QuotedMsgID, &m.IsEdited, &m.IsDeleted, &m.DeletedFor, &m.Timestamp, &m.CreatedAt); err != nil {
+			&m.Status, &m.Reactions, &m.QuotedMsgID, &m.IsEdited, &m.EditHistory, &m.IsDeleted, &m.DeletedFor, &m.Timestamp, &m.CreatedAt); err != nil {
 			return nil, err
 		}
 		msgs = append(msgs, m)
@@ -425,6 +425,14 @@ func (r *WhatsappRepo) DeleteMessage(ctx context.Context, orgID, remoteMsgID, de
 	_, err := r.db.Exec(ctx,
 		`UPDATE whatsapp_messages SET is_deleted = TRUE, deleted_for = $3 WHERE org_id = $1 AND remote_msg_id = $2`,
 		orgID, remoteMsgID, deletedFor,
+	)
+	return err
+}
+
+func (r *WhatsappRepo) UpdateMessageContent(ctx context.Context, orgID, remoteMsgID, newContent string, editHistory []byte) error {
+	_, err := r.db.Exec(ctx,
+		`UPDATE whatsapp_messages SET content = $3, is_edited = TRUE, edit_history = $4 WHERE org_id = $1 AND remote_msg_id = $2`,
+		orgID, remoteMsgID, newContent, editHistory,
 	)
 	return err
 }

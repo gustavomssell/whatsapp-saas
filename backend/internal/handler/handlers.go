@@ -6,6 +6,7 @@ import (
 	"log"
 	"net/http"
 	"strconv"
+	"time"
 
 	"github.com/go-chi/chi/v5"
 	"github.com/golang-jwt/jwt/v5"
@@ -262,6 +263,50 @@ func (h *Handler) SendMessage(w http.ResponseWriter, r *http.Request) {
 	h.respondJSON(w, http.StatusCreated, msg)
 }
 
+func (h *Handler) EditMessage(w http.ResponseWriter, r *http.Request) {
+	orgID := middleware.GetOrgID(r.Context())
+
+	var body struct {
+		MsgID string `json:"msg_id"`
+		Text  string `json:"text"`
+	}
+	if err := json.NewDecoder(r.Body).Decode(&body); err != nil || body.MsgID == "" || body.Text == "" {
+		h.respondError(w, http.StatusBadRequest, "msg_id e text são obrigatórios")
+		return
+	}
+
+	origMsg, err := h.repo.FindMessageByRemoteID(r.Context(), orgID, body.MsgID)
+	if err != nil {
+		h.respondError(w, http.StatusNotFound, "mensagem não encontrada")
+		return
+	}
+
+	editEntry := map[string]interface{}{
+		"old_content": origMsg.Content,
+		"edited_at":   time.Now().UTC(),
+	}
+
+	var history []map[string]interface{}
+	if len(origMsg.EditHistory) > 0 {
+		json.Unmarshal(origMsg.EditHistory, &history)
+	}
+	history = append(history, editEntry)
+	historyBytes, _ := json.Marshal(history)
+
+	err = h.repo.UpdateMessageContent(r.Context(), orgID, body.MsgID, body.Text, historyBytes)
+	if err != nil {
+		h.respondError(w, http.StatusInternalServerError, err.Error())
+		return
+	}
+
+	origMsg.Content = body.Text
+	origMsg.IsEdited = true
+	origMsg.EditHistory = historyBytes
+	h.respondJSON(w, http.StatusOK, origMsg)
+}
+
+// ── Upload ────────────────────────────────────────────────────
+
 func (h *Handler) SendMedia(w http.ResponseWriter, r *http.Request) {
 	orgID := middleware.GetOrgID(r.Context())
 	jid := chi.URLParam(r, "jid")
@@ -401,26 +446,6 @@ func (h *Handler) BulkActions(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 	h.respondJSON(w, http.StatusOK, map[string]string{"message": "ação aplicada"})
-}
-
-// ── Edit Message ──────────────────────────────────────────────────
-
-func (h *Handler) UpdateMessageContent(w http.ResponseWriter, r *http.Request) {
-	orgID := middleware.GetOrgID(r.Context())
-	remoteMsgID := chi.URLParam(r, "remoteMsgID")
-	var body struct {
-		Content string `json:"content"`
-	}
-	if err := json.NewDecoder(r.Body).Decode(&body); err != nil || body.Content == "" {
-		h.respondError(w, http.StatusBadRequest, "conteúdo é obrigatório")
-		return
-	}
-	err := h.wa.UpdateMessageContent(r.Context(), orgID, remoteMsgID, body.Content)
-	if err != nil {
-		h.respondError(w, http.StatusInternalServerError, err.Error())
-		return
-	}
-	h.respondJSON(w, http.StatusOK, map[string]string{"message": "atualizado"})
 }
 
 // ── Upload ────────────────────────────────────────────────────

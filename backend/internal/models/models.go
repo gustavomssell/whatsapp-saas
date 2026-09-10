@@ -73,6 +73,7 @@ type WhatsappMessage struct {
 	Reactions      json.RawMessage `json:"reactions" db:"reactions"`
 	QuotedMsgID    string          `json:"quoted_msg_id" db:"quoted_msg_id"`
 	IsEdited       bool            `json:"is_edited" db:"is_edited"`
+	EditHistory    json.RawMessage `json:"edit_history" db:"edit_history"`
 	IsDeleted      bool            `json:"is_deleted" db:"is_deleted"`
 	DeletedFor     string          `json:"deleted_for" db:"deleted_for"`
 	Timestamp      time.Time       `json:"timestamp" db:"timestamp"`

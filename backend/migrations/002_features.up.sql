@@ -2,6 +2,7 @@
 
 ALTER TABLE whatsapp_messages ADD COLUMN IF NOT EXISTS is_deleted BOOLEAN DEFAULT FALSE;
 ALTER TABLE whatsapp_messages ADD COLUMN IF NOT EXISTS deleted_for VARCHAR(50) DEFAULT '';
+ALTER TABLE whatsapp_messages ADD COLUMN IF NOT EXISTS edit_history JSONB DEFAULT '[]';
 
 ALTER TABLE whatsapp_quick_replies ADD COLUMN IF NOT EXISTS media_url TEXT DEFAULT '';
 ALTER TABLE whatsapp_quick_replies ADD COLUMN IF NOT EXISTS media_type VARCHAR(100) DEFAULT '';

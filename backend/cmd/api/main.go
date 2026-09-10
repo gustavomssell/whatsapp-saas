@@ -72,6 +72,8 @@ func main() {
 
 				r.Get("/conversations", h.ListConversations)
 				r.Post("/conversations/{jid}/messages", h.SendMessage)
+				r.Post("/conversations/{jid}/edit", h.EditMessage)
+				r.Post("/conversations/{jid}/edit", h.EditMessage)
 				r.Get("/conversations/{jid}/messages", h.ListMessages)
 				r.Post("/conversations/{jid}/media", h.SendMedia)
 				r.Post("/conversations/{jid}/reaction", h.SendReaction)
@@ -81,7 +83,6 @@ func main() {
 				r.Post("/conversations/{jid}/tags", h.UpdateTags)
 				r.Post("/conversations/{jid}/pin", h.PinConversation)
 				r.Post("/conversations/bulk", h.BulkActions)
-				r.Post("/conversations/{remoteMsgID}/content", h.UpdateMessageContent)
 				r.Delete("/conversations/{jid}/messages/{msgId}", h.DeleteMessage)
 				r.Post("/conversations/{jid}/forward", h.ForwardMessage)
 				r.Get("/conversations/{jid}/search", h.SearchMessages)
