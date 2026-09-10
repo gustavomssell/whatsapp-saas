@@ -167,3 +167,71 @@ type WhatsappWebhookEvent struct {
 	InstanceID string      `json:"instance"`
 	Data       interface{} `json:"data"`
 }
+
+type Plan struct {
+	ID                string          `json:"id" db:"id"`
+	Name              string          `json:"name" db:"name"`
+	DisplayName       string          `json:"display_name" db:"display_name"`
+	PriceMonthly      float64         `json:"price_monthly" db:"price_monthly"`
+	PriceYearly       float64         `json:"price_yearly" db:"price_yearly"`
+	MaxConversations  int             `json:"max_conversations" db:"max_conversations"`
+	MaxMessagesMonth  int             `json:"max_messages_month" db:"max_messages_month"`
+	MaxMembers        int             `json:"max_members" db:"max_members"`
+	MaxQuickReplies   int             `json:"max_quick_replies" db:"max_quick_replies"`
+	MaxGroups         int             `json:"max_groups" db:"max_groups"`
+	Features          json.RawMessage `json:"features" db:"features"`
+	IsActive          bool            `json:"is_active" db:"is_active"`
+	CreatedAt         time.Time       `json:"created_at" db:"created_at"`
+	UpdatedAt         time.Time       `json:"updated_at" db:"updated_at"`
+}
+
+type Subscription struct {
+	ID                 string          `json:"id" db:"id"`
+	OrgID              string          `json:"org_id" db:"org_id"`
+	PlanID             string          `json:"plan_id" db:"plan_id"`
+	Status             string          `json:"status" db:"status"`
+	BillingCycle       string          `json:"billing_cycle" db:"billing_cycle"`
+	CurrentPeriodStart time.Time       `json:"current_period_start" db:"current_period_start"`
+	CurrentPeriodEnd   *time.Time      `json:"current_period_end" db:"current_period_end"`
+	TrialEndsAt        *time.Time      `json:"trial_ends_at" db:"trial_ends_at"`
+	CancelledAt        *time.Time      `json:"cancelled_at" db:"cancelled_at"`
+	PaymentMethod      json.RawMessage `json:"payment_method" db:"payment_method"`
+	CreatedAt          time.Time       `json:"created_at" db:"created_at"`
+	UpdatedAt          time.Time       `json:"updated_at" db:"updated_at"`
+}
+
+type UsageTracking struct {
+	ID               string    `json:"id" db:"id"`
+	OrgID            string    `json:"org_id" db:"org_id"`
+	Period           string    `json:"period" db:"period"`
+	MessagesSent     int       `json:"messages_sent" db:"messages_sent"`
+	MessagesReceived int       `json:"messages_received" db:"messages_received"`
+	ConversationsActive int    `json:"conversations_active" db:"conversations_active"`
+	MembersCount     int       `json:"members_count" db:"members_count"`
+	ApiCalls         int       `json:"api_calls" db:"api_calls"`
+	CreatedAt        time.Time `json:"created_at" db:"created_at"`
+	UpdatedAt        time.Time `json:"updated_at" db:"updated_at"`
+}
+
+type Invoice struct {
+	ID             string          `json:"id" db:"id"`
+	OrgID          string          `json:"org_id" db:"org_id"`
+	SubscriptionID string          `json:"subscription_id" db:"subscription_id"`
+	Amount         float64         `json:"amount" db:"amount"`
+	Currency       string          `json:"currency" db:"currency"`
+	Status         string          `json:"status" db:"status"`
+	PaymentMethod  string          `json:"payment_method" db:"payment_method"`
+	PaymentID      string          `json:"payment_id" db:"payment_id"`
+	Description    string          `json:"description" db:"description"`
+	Metadata       json.RawMessage `json:"metadata" db:"metadata"`
+	DueDate        *time.Time      `json:"due_date" db:"due_date"`
+	PaidAt         *time.Time      `json:"paid_at" db:"paid_at"`
+	CreatedAt      time.Time       `json:"created_at" db:"created_at"`
+}
+
+type OrgPlanInfo struct {
+	Plan          Plan           `json:"plan"`
+	Subscription  Subscription   `json:"subscription"`
+	Usage         UsageTracking  `json:"usage"`
+	HasFeature    func(string) bool `json:"-"`
+}

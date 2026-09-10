@@ -36,10 +36,11 @@ func main() {
 	authService := service.NewAuthService(pool, cfg.JWTSecret)
 	evolutionClient := service.NewEvolutionClient(cfg.EvolutionAPIURL, cfg.EvolutionAPIKey)
 	whatsappRepo := repository.NewWhatsappRepo(pool)
+	billingRepo := repository.NewBillingRepo(pool)
 	whatsappService := service.NewWhatsappService(whatsappRepo, evolutionClient, hub)
 	uploadService := service.NewUploadService(cfg.UploadDir, cfg.UploadPublicURL, cfg.UploadMaxSizeMB)
 
-	h := handler.NewHandler(authService, whatsappService, whatsappRepo, uploadService, hub)
+	h := handler.NewHandler(authService, whatsappService, whatsappRepo, billingRepo, uploadService, hub)
 
 	r := chi.NewRouter()
 	r.Use(chimw.Logger)
@@ -106,6 +107,16 @@ func main() {
 			r.Get("/dashboard/stats", h.DashboardStats)
 			r.Get("/dashboard/chart", h.DashboardChart)
 			r.Get("/members", h.ListMembers)
+
+			r.Route("/billing", func(r chi.Router) {
+				r.Get("/plans", h.ListPlans)
+				r.Get("/plan", h.GetOrgPlan)
+				r.Post("/subscribe", h.SubscribePlan)
+				r.Post("/cancel", h.CancelSubscription)
+				r.Get("/usage", h.GetUsage)
+				r.Get("/invoices", h.GetInvoices)
+				r.Post("/invoices", h.CreateInvoice)
+			})
 		})
 	})
 
