@@ -808,7 +808,7 @@ func (h *Handler) WebSocketHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	orgID, err := validateTokenForWS(token, h.auth)
+	orgID, userID, err := validateTokenForWSUser(token, h.auth)
 	if err != nil {
 		http.Error(w, "invalid token", http.StatusUnauthorized)
 		return
@@ -822,8 +822,10 @@ func (h *Handler) WebSocketHandler(w http.ResponseWriter, r *http.Request) {
 
 	ch := make(chan []byte, 256)
 	h.hub.Register(orgID, ch)
+	h.hub.RegisterUser(userID, ch)
 	defer func() {
 		h.hub.Unregister(orgID, ch)
+		h.hub.UnregisterUser(userID, ch)
 		conn.Close()
 	}()
 
@@ -861,6 +863,28 @@ func validateTokenForWS(token string, auth *service.AuthService) (string, error)
 		return "", fmt.Errorf("org_id not found in token")
 	}
 	return orgID, nil
+}
+
+func validateTokenForWSUser(token string, auth *service.AuthService) (string, string, error) {
+	t, err := jwt.Parse(token, func(t *jwt.Token) (interface{}, error) {
+		if _, ok := t.Method.(*jwt.SigningMethodHMAC); !ok {
+			return nil, fmt.Errorf("unexpected signing method")
+		}
+		return []byte(auth.GetJWTSecret()), nil
+	})
+	if err != nil || !t.Valid {
+		return "", "", fmt.Errorf("invalid token")
+	}
+	claims, ok := t.Claims.(jwt.MapClaims)
+	if !ok {
+		return "", "", fmt.Errorf("invalid claims")
+	}
+	orgID, _ := claims["org_id"].(string)
+	userID, _ := claims["user_id"].(string)
+	if orgID == "" || userID == "" {
+		return "", "", fmt.Errorf("org_id or user_id not found in token")
+	}
+	return orgID, userID, nil
 }
 
 func (h *Handler) SendMediaDirect(w http.ResponseWriter, r *http.Request) {

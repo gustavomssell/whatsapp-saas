@@ -308,6 +308,17 @@ func (s *WhatsappService) handleIncoming(ctx context.Context, orgID, remoteJid, 
 	}
 
 	s.broadcastNewMessage(orgID, remoteJid, msg)
+
+	if conv.AssignedGuide != "" {
+		notification := map[string]interface{}{
+			"type":    "guide_notification",
+			"jid":     remoteJid,
+			"conv_id": conv.ID,
+			"sender":  senderName,
+			"content": content,
+		}
+		s.hub.BroadcastJSONToUser(conv.AssignedGuide, notification)
+	}
 }
 
 func (s *WhatsappService) handleOutgoingMirror(ctx context.Context, orgID, remoteJid, msgID, content, mediaURL, mediaType, msgType string, ts time.Time) {
