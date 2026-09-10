@@ -3,7 +3,6 @@ package repository
 import (
 	"context"
 	"fmt"
-	"strings"
 
 	"github.com/jackc/pgx/v5/pgxpool"
 
@@ -12,6 +11,10 @@ import (
 
 type WhatsappRepo struct {
 	db *pgxpool.Pool
+}
+
+func (r *WhatsappRepo) DB() *pgxpool.Pool {
+	return r.db
 }
 
 func NewWhatsappRepo(db *pgxpool.Pool) *WhatsappRepo {
@@ -120,8 +123,8 @@ func (r *WhatsappRepo) ListConversations(ctx context.Context, orgID string, limi
 
 func (r *WhatsappRepo) ListMessages(ctx context.Context, conversationID string, limit int) ([]models.WhatsappMessage, error) {
 	rows, err := r.db.Query(ctx,
-		`SELECT id, conversation_id, org_id, remote_msg_id, sender, sender_name, content, msg_type, media_url, media_type, from_me, is_group, status, reactions, quoted_msg_id, is_edited, timestamp, created_at
-		 FROM (SELECT * FROM whatsapp_messages WHERE conversation_id = $1 ORDER BY timestamp DESC LIMIT $2) sub
+		`SELECT id, conversation_id, org_id, remote_msg_id, sender, sender_name, content, msg_type, media_url, media_type, from_me, is_group, status, reactions, quoted_msg_id, is_edited, is_deleted, deleted_for, timestamp, created_at
+		 FROM (SELECT * FROM whatsapp_messages WHERE conversation_id = $1 AND is_deleted = FALSE ORDER BY timestamp DESC LIMIT $2) sub
 		 ORDER BY timestamp ASC`, conversationID, limit,
 	)
 	if err != nil {
@@ -134,7 +137,7 @@ func (r *WhatsappRepo) ListMessages(ctx context.Context, conversationID string, 
 		var m models.WhatsappMessage
 		if err := rows.Scan(&m.ID, &m.ConversationID, &m.OrgID, &m.RemoteMsgID, &m.Sender, &m.SenderName,
 			&m.Content, &m.MsgType, &m.MediaURL, &m.MediaType, &m.FromMe, &m.IsGroup,
-			&m.Status, &m.Reactions, &m.QuotedMsgID, &m.IsEdited, &m.Timestamp, &m.CreatedAt); err != nil {
+			&m.Status, &m.Reactions, &m.QuotedMsgID, &m.IsEdited, &m.IsDeleted, &m.DeletedFor, &m.Timestamp, &m.CreatedAt); err != nil {
 			return nil, err
 		}
 		msgs = append(msgs, m)
@@ -346,7 +349,7 @@ func (r *WhatsappRepo) SearchConversations(ctx context.Context, orgID, query str
 
 func (r *WhatsappRepo) ListQuickReplies(ctx context.Context, orgID string) ([]models.WhatsappQuickReply, error) {
 	rows, err := r.db.Query(ctx,
-		`SELECT id, org_id, shortcut, title, content, variables, is_global, created_at
+		`SELECT id, org_id, shortcut, title, content, COALESCE(media_url,''), COALESCE(media_type,''), variables, is_global, created_at
 		 FROM whatsapp_quick_replies WHERE org_id = $1 ORDER BY shortcut`, orgID,
 	)
 	if err != nil {
@@ -357,7 +360,7 @@ func (r *WhatsappRepo) ListQuickReplies(ctx context.Context, orgID string) ([]mo
 	var qrs []models.WhatsappQuickReply
 	for rows.Next() {
 		var q models.WhatsappQuickReply
-		rows.Scan(&q.ID, &q.OrgID, &q.Shortcut, &q.Title, &q.Content, &q.Variables, &q.IsGlobal, &q.CreatedAt)
+		rows.Scan(&q.ID, &q.OrgID, &q.Shortcut, &q.Title, &q.Content, &q.MediaURL, &q.MediaType, &q.Variables, &q.IsGlobal, &q.CreatedAt)
 		qrs = append(qrs, q)
 	}
 	return qrs, nil
@@ -365,9 +368,9 @@ func (r *WhatsappRepo) ListQuickReplies(ctx context.Context, orgID string) ([]mo
 
 func (r *WhatsappRepo) CreateQuickReply(ctx context.Context, qr *models.WhatsappQuickReply) error {
 	return r.db.QueryRow(ctx,
-		`INSERT INTO whatsapp_quick_replies (org_id, shortcut, title, content, variables, is_global)
-		 VALUES ($1, $2, $3, $4, $5, $6) RETURNING id, created_at`,
-		qr.OrgID, qr.Shortcut, qr.Title, qr.Content, qr.Variables, qr.IsGlobal,
+		`INSERT INTO whatsapp_quick_replies (org_id, shortcut, title, content, media_url, media_type, variables, is_global)
+		 VALUES ($1, $2, $3, $4, $5, $6, $7, $8) RETURNING id, created_at`,
+		qr.OrgID, qr.Shortcut, qr.Title, qr.Content, qr.MediaURL, qr.MediaType, qr.Variables, qr.IsGlobal,
 	).Scan(&qr.ID, &qr.CreatedAt)
 }
 
@@ -378,12 +381,66 @@ func (r *WhatsappRepo) DeleteQuickReply(ctx context.Context, orgID, qrID string)
 	return err
 }
 
-func (r *WhatsappRepo) ListNotes(ctx context.Context, orgID, conversationID string) ([]models.WhatsappNote, error) {
+func (r *WhatsappRepo) DeleteMessage(ctx context.Context, orgID, remoteMsgID, deletedFor string) error {
+	_, err := r.db.Exec(ctx,
+		`UPDATE whatsapp_messages SET is_deleted = TRUE, deleted_for = $3 WHERE org_id = $1 AND remote_msg_id = $2`,
+		orgID, remoteMsgID, deletedFor,
+	)
+	return err
+}
+
+func (r *WhatsappRepo) GetTagColors(ctx context.Context, orgID string) ([]models.TagColor, error) {
+	rows, err := r.db.Query(ctx,
+		`SELECT id, org_id, tag, color, created_at FROM tag_colors WHERE org_id = $1 ORDER BY tag`, orgID,
+	)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	var colors []models.TagColor
+	for rows.Next() {
+		var tc models.TagColor
+		rows.Scan(&tc.ID, &tc.OrgID, &tc.Tag, &tc.Color, &tc.CreatedAt)
+		colors = append(colors, tc)
+	}
+	return colors, nil
+}
+
+func (r *WhatsappRepo) SetTagColor(ctx context.Context, orgID, tag, color string) error {
+	_, err := r.db.Exec(ctx,
+		`INSERT INTO tag_colors (org_id, tag, color) VALUES ($1, $2, $3)
+		 ON CONFLICT (org_id, tag) DO UPDATE SET color = $3`,
+		orgID, tag, color,
+	)
+	return err
+}
+
+func (r *WhatsappRepo) DeleteTagColor(ctx context.Context, orgID, tag string) error {
+	_, err := r.db.Exec(ctx,
+		`DELETE FROM tag_colors WHERE org_id = $1 AND tag = $2`, orgID, tag,
+	)
+	return err
+}
+
+func (r *WhatsappRepo) FindConversationIDByJid(ctx context.Context, orgID, jid string) (string, error) {
+	var id string
+	err := r.db.QueryRow(ctx,
+		`SELECT id FROM whatsapp_conversations WHERE org_id = $1 AND jid = $2`, orgID, jid,
+	).Scan(&id)
+	return id, err
+}
+
+func (r *WhatsappRepo) ListNotes(ctx context.Context, orgID, convJid string) ([]models.WhatsappNote, error) {
+	convID, err := r.FindConversationIDByJid(ctx, orgID, convJid)
+	if err != nil {
+		return nil, err
+	}
 	notes := []models.WhatsappNote{}
 	rows, err := r.db.Query(ctx,
 		`SELECT id, conversation_id, org_id, user_name, content, created_at
 		 FROM whatsapp_notes WHERE org_id = $1 AND conversation_id = $2 ORDER BY created_at DESC`,
-		orgID, conversationID,
+		orgID, convID,
 	)
 	if err != nil {
 		return nil, err
@@ -399,12 +456,16 @@ func (r *WhatsappRepo) ListNotes(ctx context.Context, orgID, conversationID stri
 	return notes, rows.Err()
 }
 
-func (r *WhatsappRepo) CreateNote(ctx context.Context, orgID, conversationID, userName string, content string) (*models.WhatsappNote, error) {
+func (r *WhatsappRepo) CreateNote(ctx context.Context, orgID, convJid, userName string, content string) (*models.WhatsappNote, error) {
+	convID, err := r.FindConversationIDByJid(ctx, orgID, convJid)
+	if err != nil {
+		return nil, err
+	}
 	note := &models.WhatsappNote{}
-	err := r.db.QueryRow(ctx,
+	err = r.db.QueryRow(ctx,
 		`INSERT INTO whatsapp_notes (org_id, conversation_id, user_name, content)
 		 VALUES ($1, $2, $3, $4) RETURNING id, conversation_id, org_id, user_name, content, created_at`,
-		orgID, conversationID, userName, content,
+		orgID, convID, userName, content,
 	).Scan(&note.ID, &note.ConversationID, &note.OrgID, &note.UserName, &note.Content, &note.CreatedAt)
 	return note, err
 }
@@ -487,59 +548,4 @@ func (r *WhatsappRepo) ListGroupMessages(ctx context.Context, groupID string, li
 	return msgs, nil
 }
 
-// Ensure strings import is used
-var _ = strings.TrimSpace
 
-func (r *WhatsappRepo) CreateConversationKey(ctx context.Context, orgID, conversationID, keyID, publicKey string) error {
-	_, err := r.db.Exec(ctx,
-		`INSERT INTO whatsapp_conversation_keys (org_id, conversation_id, key_id, public_key, created_at)
-		 VALUES ($1, $2, $3, $4, NOW())
-		 ON CONFLICT (org_id, conversation_id, key_id) DO UPDATE SET
-		   public_key = EXCLUDED.public_key,
-		   updated_at = NOW()`,
-		orgID, conversationID, keyID, publicKey,
-	)
-	return err
-}
-
-func (r *WhatsappRepo) GetConversationKey(ctx context.Context, orgID, conversationID, keyID string) (string, error) {
-	var publicKey string
-	err := r.db.QueryRow(ctx,
-		`SELECT public_key FROM whatsapp_conversation_keys WHERE org_id = $1 AND conversation_id = $2 AND key_id = $3`,
-		orgID, conversationID, keyID,
-	).Scan(&publicKey)
-	return publicKey, err
-}
-
-func (r *WhatsappRepo) ListConversationKeys(ctx context.Context, orgID, conversationID string) ([]map[string]string, error) {
-	keys := []map[string]string{}
-	rows, err := r.db.Query(ctx,
-		`SELECT key_id, public_key, created_at FROM whatsapp_conversation_keys WHERE org_id = $1 AND conversation_id = $2`,
-		orgID, conversationID,
-	)
-	if err != nil {
-		return nil, err
-	}
-	defer rows.Close()
-	for rows.Next() {
-		var id, publicKey, createdAt string
-		if err := rows.Scan(&id, &publicKey, &createdAt); err != nil {
-			return nil, err
-		}
-		key := map[string]string{
-			"key_id":      id,
-			"public_key":  publicKey,
-			"created_at":  createdAt,
-		}
-		keys = append(keys, key)
-	}
-	return keys, rows.Err()
-}
-
-func (r *WhatsappRepo) RotateConversationKey(ctx context.Context, orgID, conversationID, keyID, newPublicKey string) error {
-	_, err := r.db.Exec(ctx,
-		`UPDATE whatsapp_conversation_keys SET public_key = $4, updated_at = NOW() WHERE org_id = $1 AND conversation_id = $2 AND key_id = $3`,
-		orgID, conversationID, keyID, newPublicKey,
-	)
-	return err
-}

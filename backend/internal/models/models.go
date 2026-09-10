@@ -73,6 +73,8 @@ type WhatsappMessage struct {
 	Reactions      json.RawMessage `json:"reactions" db:"reactions"`
 	QuotedMsgID    string          `json:"quoted_msg_id" db:"quoted_msg_id"`
 	IsEdited       bool            `json:"is_edited" db:"is_edited"`
+	IsDeleted      bool            `json:"is_deleted" db:"is_deleted"`
+	DeletedFor     string          `json:"deleted_for" db:"deleted_for"`
 	Timestamp      time.Time       `json:"timestamp" db:"timestamp"`
 	CreatedAt      time.Time       `json:"created_at" db:"created_at"`
 }
@@ -93,8 +95,18 @@ type WhatsappQuickReply struct {
 	Shortcut  string    `json:"shortcut" db:"shortcut"`
 	Title     string    `json:"title" db:"title"`
 	Content   string    `json:"content" db:"content"`
+	MediaURL  string    `json:"media_url" db:"media_url"`
+	MediaType string    `json:"media_type" db:"media_type"`
 	Variables []string  `json:"variables" db:"variables"`
 	IsGlobal  bool      `json:"is_global" db:"is_global"`
+	CreatedAt time.Time `json:"created_at" db:"created_at"`
+}
+
+type TagColor struct {
+	ID        string    `json:"id" db:"id"`
+	OrgID     string    `json:"org_id" db:"org_id"`
+	Tag       string    `json:"tag" db:"tag"`
+	Color     string    `json:"color" db:"color"`
 	CreatedAt time.Time `json:"created_at" db:"created_at"`
 }
 
