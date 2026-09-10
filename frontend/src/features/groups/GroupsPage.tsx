@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { useTranslation } from "react-i18next";
 import { api } from "@/services/api";
 import { Users, Search, ArrowUpRight, Link2, MessageSquare, X } from "lucide-react";
 import { cn } from "@/lib/utils";
@@ -24,6 +25,7 @@ interface GroupMessage {
 }
 
 export default function GroupsPage() {
+  const { t } = useTranslation();
   const [groups, setGroups] = useState<Group[]>([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState("");
@@ -85,8 +87,8 @@ export default function GroupsPage() {
       )}>
         <div className="px-4 pt-4 pb-3">
           <div className="flex items-center justify-between mb-3">
-            <h2 className="text-base font-semibold">Grupos</h2>
-            <span className="text-xs text-muted-foreground">{groups.length} grupos</span>
+            <h2 className="text-base font-semibold">{t("groups.title")}</h2>
+            <span className="text-xs text-muted-foreground">{t("groups.groupsCount", { count: groups.length })}</span>
           </div>
           <div className="relative mb-2">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
@@ -94,7 +96,7 @@ export default function GroupsPage() {
               type="text"
               value={search}
               onChange={(e) => setSearch(e.target.value)}
-              placeholder="Buscar grupo..."
+              placeholder={t("groups.searchPlaceholder")}
               className="w-full pl-9 pr-3 py-2 text-sm rounded-xl border border-border bg-background placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring/30 focus:border-ring/50 transition-colors"
             />
           </div>
@@ -107,7 +109,7 @@ export default function GroupsPage() {
                 <Users className="h-5 w-5 text-primary" />
               </div>
               <p className="text-sm text-muted-foreground">
-                {groups.length === 0 ? "Nenhum grupo encontrado" : "Nenhum grupo corresponde a busca"}
+                {groups.length === 0 ? t("groups.noGroups") : t("groups.noMatches")}
               </p>
             </div>
           ) : (
@@ -125,11 +127,11 @@ export default function GroupsPage() {
                 </div>
                 <div className="flex-1 min-w-0">
                   <div className="flex items-center justify-between gap-2">
-                    <span className="font-medium text-sm truncate">{group.subject || "Sem nome"}</span>
+                    <span className="font-medium text-sm truncate">{group.subject || t("groups.noName")}</span>
                     <ArrowUpRight className="h-4 w-4 text-muted-foreground flex-shrink-0" />
                   </div>
                   <p className="text-xs text-muted-foreground mt-0.5">
-                    {group.participant_count} participante{group.participant_count !== 1 && "s"}
+                    {t("groups.participantCount", { count: group.participant_count })}
                     {group.description && ` — ${group.description.slice(0, 40)}${group.description.length > 40 ? "..." : ""}`}
                   </p>
                 </div>
@@ -150,7 +152,7 @@ export default function GroupsPage() {
               <div className="w-16 h-16 rounded-2xl bg-primary/10 flex items-center justify-center mx-auto mb-4">
                 <Users className="h-7 w-7 text-primary" />
               </div>
-              <p className="text-muted-foreground">Selecione um grupo para ver detalhes</p>
+              <p className="text-muted-foreground">{t("groups.selectGroup")}</p>
             </div>
           </div>
         ) : (
@@ -169,7 +171,7 @@ export default function GroupsPage() {
               <div className="flex-1 min-w-0">
                 <p className="font-medium text-sm truncate">{selectedGroup.subject}</p>
                 <p className="text-xs text-muted-foreground">
-                  {selectedGroup.participant_count} participante{selectedGroup.participant_count !== 1 && "s"}
+                  {t("groups.participantCount", { count: selectedGroup.participant_count })}
                 </p>
               </div>
             </div>
@@ -179,20 +181,20 @@ export default function GroupsPage() {
               {/* Description */}
               {selectedGroup.description && (
                 <div className="mb-4 p-3 rounded-xl bg-card border border-border">
-                  <p className="text-xs text-muted-foreground mb-1">Descricao</p>
+                  <p className="text-xs text-muted-foreground mb-1">{t("groups.description")}</p>
                   <p className="text-sm">{selectedGroup.description}</p>
                 </div>
               )}
 
               {/* Recent messages */}
               <div className="mb-4">
-                <h3 className="text-sm font-semibold mb-2">Mensagens recentes</h3>
+                <h3 className="text-sm font-semibold mb-2">{t("groups.recentMessages")}</h3>
                 {loadingMessages ? (
                   <div className="flex justify-center py-6">
                     <div className="w-5 h-5 border-2 border-primary/30 border-t-primary rounded-full animate-spin" />
                   </div>
                 ) : messages.length === 0 ? (
-                  <p className="text-xs text-muted-foreground text-center py-4">Nenhuma mensagem</p>
+                  <p className="text-xs text-muted-foreground text-center py-4">{t("groups.noMessages")}</p>
                 ) : (
                   <div className="space-y-2">
                     {messages.slice(-10).map((msg) => (
@@ -201,7 +203,7 @@ export default function GroupsPage() {
                         msg.from_me ? "bg-primary/5 border-primary/20" : "bg-card border-border"
                       )}>
                         <div className="flex items-center justify-between mb-1">
-                          <span className="text-xs font-medium text-primary">{msg.sender_name || "Desconhecido"}</span>
+                          <span className="text-xs font-medium text-primary">{msg.sender_name || t("groups.unknown")}</span>
                           <span className="text-[10px] text-muted-foreground">{formatTime(msg.timestamp)}</span>
                         </div>
                         {msg.msg_type === "media" && msg.media_url ? (
@@ -209,7 +211,7 @@ export default function GroupsPage() {
                             <img src={msg.media_url} alt="media" className="rounded-lg max-h-32 object-cover" />
                           ) : (
                             <a href={msg.media_url} target="_blank" rel="noopener" className="text-xs text-primary underline">
-                              Arquivo
+                              {t("groups.file")}
                             </a>
                           )
                         ) : (
@@ -226,15 +228,15 @@ export default function GroupsPage() {
                 <button className="w-full flex items-center gap-3 p-3 rounded-xl bg-card border border-border hover:border-primary/30 transition-colors text-left">
                   <Link2 className="h-4 w-4 text-primary" />
                   <div>
-                    <p className="text-sm font-medium">Link de convite</p>
-                    <p className="text-xs text-muted-foreground">Copiar link para compartilhar</p>
+                    <p className="text-sm font-medium">{t("groups.inviteLink")}</p>
+                    <p className="text-xs text-muted-foreground">{t("groups.copyLinkDescription")}</p>
                   </div>
                 </button>
                 <button className="w-full flex items-center gap-3 p-3 rounded-xl bg-card border border-border hover:border-primary/30 transition-colors text-left">
                   <MessageSquare className="h-4 w-4 text-primary" />
                   <div>
-                    <p className="text-sm font-medium">Enviar mensagem</p>
-                    <p className="text-xs text-muted-foreground">Enviar mensagem direta para o grupo</p>
+                    <p className="text-sm font-medium">{t("groups.sendMessage")}</p>
+                    <p className="text-xs text-muted-foreground">{t("groups.sendMessageDescription")}</p>
                   </div>
                 </button>
               </div>
