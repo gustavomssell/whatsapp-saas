@@ -1,0 +1,34 @@
+<!doctype html>
+<html lang="pt-BR" class="dark">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>WhatsApp SaaS</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet" />
+    <script>
+      (function() {
+        try {
+          var theme = localStorage.getItem("wpsaas-theme") || "system";
+          var resolved;
+          if (theme === "system") {
+            resolved = window.matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light";
+          } else {
+            resolved = theme;
+          }
+          document.documentElement.classList.remove("light", "dark");
+          document.documentElement.classList.add(resolved);
+          document.documentElement.style.colorScheme = resolved;
+        } catch(e) {
+          document.documentElement.classList.add("dark");
+          document.documentElement.style.colorScheme = "dark";
+        }
+      })();
+    </script>
+  </head>
+  <body>
+    <div id="root"></div>
+    <script type="module" src="/src/main.tsx"></script>
+  </body>
+</html>

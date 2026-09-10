@@ -1,0 +1,59 @@
+services:
+  postgres:
+    image: postgres:16-alpine
+    container_name: wpsaas_db
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: wpsaas
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+    ports:
+      - "5435:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./backend/migrations:/docker-entrypoint-initdb.d:ro
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres -d wpsaas"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: wpsaas_api
+    restart: unless-stopped
+    ports:
+      - "8090:8080"
+    environment:
+      DATABASE_URL: postgres://postgres:postgres@postgres:5432/wpsaas?sslmode=disable
+      JWT_SECRET: wpsaas-secret-change-in-production
+      PORT: 8080
+      ENV: development
+      UPLOAD_DIR: /app/uploads
+      UPLOAD_MAX_SIZE_MB: 32
+      UPLOAD_PUBLIC_URL: http://localhost:8090/uploads
+      EVOLUTION_API_URL: http://host.docker.internal:8082
+      EVOLUTION_API_KEY: ${EVOLUTION_API_KEY:-}
+    volumes:
+      - uploads_data:/app/uploads
+    depends_on:
+      postgres:
+        condition: service_healthy
+
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    container_name: wpsaas_web
+    restart: unless-stopped
+    ports:
+      - "3080:80"
+    depends_on:
+      - backend
+
+volumes:
+  postgres_data:
+    name: wpsaas_postgres_data
+  uploads_data:

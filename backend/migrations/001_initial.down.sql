@@ -1,0 +1,9 @@
+DROP TABLE IF EXISTS whatsapp_group_messages CASCADE;
+DROP TABLE IF EXISTS whatsapp_groups CASCADE;
+DROP TABLE IF EXISTS whatsapp_quick_replies CASCADE;
+DROP TABLE IF EXISTS whatsapp_notes CASCADE;
+DROP TABLE IF EXISTS whatsapp_messages CASCADE;
+DROP TABLE IF EXISTS whatsapp_conversations CASCADE;
+DROP TABLE IF EXISTS organization_members CASCADE;
+DROP TABLE IF EXISTS users CASCADE;
+DROP TABLE IF EXISTS organizations CASCADE;
