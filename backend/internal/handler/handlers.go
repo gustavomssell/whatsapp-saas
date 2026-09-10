@@ -176,12 +176,22 @@ func (h *Handler) WhatsAppDisconnect(w http.ResponseWriter, r *http.Request) {
 
 func (h *Handler) WhatsAppContacts(w http.ResponseWriter, r *http.Request) {
 	orgID := middleware.GetOrgID(r.Context())
+	query := r.URL.Query().Get("q")
+	if query != "" {
+		convs, err := h.repo.SearchConversations(r.Context(), orgID, query, 20)
+		if err != nil {
+			h.respondError(w, http.StatusInternalServerError, err.Error())
+			return
+		}
+		h.respondJSON(w, http.StatusOK, map[string]interface{}{"data": convs})
+		return
+	}
 	contacts, err := h.wa.GetContacts(r.Context(), orgID)
 	if err != nil {
 		h.respondError(w, http.StatusInternalServerError, err.Error())
 		return
 	}
-	h.respondJSON(w, http.StatusOK, contacts)
+	h.respondJSON(w, http.StatusOK, map[string]interface{}{"data": contacts})
 }
 
 // ── WhatsApp Inbox ────────────────────────────────────────────
@@ -512,6 +522,67 @@ func (h *Handler) DeleteQuickReply(w http.ResponseWriter, r *http.Request) {
 	h.respondJSON(w, http.StatusOK, map[string]string{"message": "deletado"})
 }
 
+// ── Delete Message ────────────────────────────────────────────
+
+func (h *Handler) DeleteMessage(w http.ResponseWriter, r *http.Request) {
+	orgID := middleware.GetOrgID(r.Context())
+	remoteMsgID := chi.URLParam(r, "msgId")
+	var body struct {
+		ForEveryone bool `json:"for_everyone"`
+	}
+	json.NewDecoder(r.Body).Decode(&body)
+
+	deletedFor := "me"
+	if body.ForEveryone {
+		deletedFor = "everyone"
+	}
+
+	if err := h.repo.DeleteMessage(r.Context(), orgID, remoteMsgID, deletedFor); err != nil {
+		h.respondError(w, http.StatusInternalServerError, err.Error())
+		return
+	}
+	h.respondJSON(w, http.StatusOK, map[string]string{"message": "deletado"})
+}
+
+// ── Tag Colors ────────────────────────────────────────────────
+
+func (h *Handler) GetTagColors(w http.ResponseWriter, r *http.Request) {
+	orgID := middleware.GetOrgID(r.Context())
+	colors, err := h.repo.GetTagColors(r.Context(), orgID)
+	if err != nil {
+		h.respondError(w, http.StatusInternalServerError, err.Error())
+		return
+	}
+	h.respondJSON(w, http.StatusOK, colors)
+}
+
+func (h *Handler) SetTagColor(w http.ResponseWriter, r *http.Request) {
+	orgID := middleware.GetOrgID(r.Context())
+	var body struct {
+		Tag   string `json:"tag"`
+		Color string `json:"color"`
+	}
+	if err := json.NewDecoder(r.Body).Decode(&body); err != nil || body.Tag == "" {
+		h.respondError(w, http.StatusBadRequest, "tag e color sao obrigatorios")
+		return
+	}
+	if err := h.repo.SetTagColor(r.Context(), orgID, body.Tag, body.Color); err != nil {
+		h.respondError(w, http.StatusInternalServerError, err.Error())
+		return
+	}
+	h.respondJSON(w, http.StatusOK, map[string]string{"message": "cor definida"})
+}
+
+func (h *Handler) DeleteTagColor(w http.ResponseWriter, r *http.Request) {
+	orgID := middleware.GetOrgID(r.Context())
+	tag := chi.URLParam(r, "tag")
+	if err := h.repo.DeleteTagColor(r.Context(), orgID, tag); err != nil {
+		h.respondError(w, http.StatusInternalServerError, err.Error())
+		return
+	}
+	h.respondJSON(w, http.StatusOK, map[string]string{"message": "cor removida"})
+}
+
 // ── Groups ────────────────────────────────────────────────────
 
 func (h *Handler) ListGroups(w http.ResponseWriter, r *http.Request) {
@@ -584,6 +655,45 @@ func (h *Handler) DashboardStats(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	h.respondJSON(w, http.StatusOK, stats)
+}
+
+func (h *Handler) DashboardChart(w http.ResponseWriter, r *http.Request) {
+	orgID := middleware.GetOrgID(r.Context())
+	days := 7
+	if d := r.URL.Query().Get("days"); d != "" {
+		fmt.Sscanf(d, "%d", &days)
+	}
+	if days < 1 || days > 30 {
+		days = 7
+	}
+
+	type ChartPoint struct {
+		Date     string `json:"date"`
+		Sent     int    `json:"sent"`
+		Received int    `json:"received"`
+	}
+	var chart []ChartPoint
+
+	rows, err := h.repo.DB().Query(r.Context(),
+		`SELECT DATE(timestamp) as d,
+		        COUNT(*) FILTER (WHERE from_me = TRUE) as sent,
+		        COUNT(*) FILTER (WHERE from_me = FALSE) as received
+		 FROM whatsapp_messages
+		 WHERE org_id = $1 AND timestamp >= NOW() - INTERVAL '1 day' * $2
+		 GROUP BY d ORDER BY d`, orgID, days,
+	)
+	if err != nil {
+		h.respondError(w, http.StatusInternalServerError, err.Error())
+		return
+	}
+	defer rows.Close()
+
+	for rows.Next() {
+		var p ChartPoint
+		rows.Scan(&p.Date, &p.Sent, &p.Received)
+		chart = append(chart, p)
+	}
+	h.respondJSON(w, http.StatusOK, map[string]interface{}{"data": chart})
 }
 
 // ── WebSocket ─────────────────────────────────────────────────
@@ -682,4 +792,36 @@ func (h *Handler) SendMediaDirect(w http.ResponseWriter, r *http.Request) {
 		"fileName": header.Filename,
 		"mimeType": mimeType,
 	})
+}
+
+// ── Members ─────────────────────────────────────────────────
+
+func (h *Handler) ListMembers(w http.ResponseWriter, r *http.Request) {
+	orgID := middleware.GetOrgID(r.Context())
+	rows, err := h.repo.DB().Query(r.Context(),
+		`SELECT u.id, u.name, u.email, u.role, u.avatar
+		 FROM users u
+		 JOIN organization_members om ON om.user_id = u.id
+		 WHERE om.org_id = $1 ORDER BY u.name`, orgID,
+	)
+	if err != nil {
+		h.respondError(w, http.StatusInternalServerError, err.Error())
+		return
+	}
+	defer rows.Close()
+
+	type Member struct {
+		ID    string `json:"id"`
+		Name  string `json:"name"`
+		Email string `json:"email"`
+		Role  string `json:"role"`
+		Avatar string `json:"avatar"`
+	}
+	var members []Member
+	for rows.Next() {
+		var m Member
+		rows.Scan(&m.ID, &m.Name, &m.Email, &m.Role, &m.Avatar)
+		members = append(members, m)
+	}
+	h.respondJSON(w, http.StatusOK, map[string]interface{}{"data": members})
 }

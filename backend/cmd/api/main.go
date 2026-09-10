@@ -82,6 +82,7 @@ func main() {
 				r.Post("/conversations/{jid}/pin", h.PinConversation)
 				r.Post("/conversations/bulk", h.BulkActions)
 				r.Post("/conversations/{remoteMsgID}/content", h.UpdateMessageContent)
+				r.Delete("/conversations/{jid}/messages/{msgId}", h.DeleteMessage)
 
 				r.Get("/quick-replies", h.ListQuickReplies)
 				r.Post("/quick-replies", h.CreateQuickReply)
@@ -92,9 +93,15 @@ func main() {
 
 				r.Get("/conversations/{convJid}/notes", h.ListNotes)
 				r.Post("/conversations/{convJid}/notes", h.CreateNote)
+
+				r.Get("/tag-colors", h.GetTagColors)
+				r.Post("/tag-colors", h.SetTagColor)
+				r.Delete("/tag-colors/{tag}", h.DeleteTagColor)
 			})
 
 			r.Get("/dashboard/stats", h.DashboardStats)
+			r.Get("/dashboard/chart", h.DashboardChart)
+			r.Get("/members", h.ListMembers)
 		})
 	})
 
