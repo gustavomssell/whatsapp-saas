@@ -1,7 +1,14 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useAuthStore } from "@/store/authStore";
 import { api } from "@/services/api";
-import { QrCode, User, Zap, ArrowRight } from "lucide-react";
+import { QrCode, User, Zap, ArrowRight, Users } from "lucide-react";
+
+interface Member {
+  id: string;
+  name: string;
+  email: string;
+  role: string;
+}
 
 export default function SettingsPage() {
   const { user } = useAuthStore();
@@ -9,6 +16,7 @@ export default function SettingsPage() {
   const [status, setStatus] = useState<string | null>(null);
   const [qrCode, setQrCode] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
+  const [members, setMembers] = useState<Member[]>([]);
 
   const checkStatus = async () => {
     try {
@@ -18,6 +26,11 @@ export default function SettingsPage() {
       setStatus("error");
     }
   };
+
+  useEffect(() => {
+    checkStatus();
+    api.getMembers().then((res) => setMembers(res.data || [])).catch(console.error);
+  }, []);
 
   const handleConnect = async () => {
     if (!instanceName.trim()) return;
@@ -49,9 +62,9 @@ export default function SettingsPage() {
   return (
     <div className="p-4 sm:p-6 lg:p-8 space-y-6 max-w-3xl mx-auto">
       <div>
-        <h1 className="text-xl sm:text-2xl font-semibold tracking-tight">Configurações</h1>
+        <h1 className="text-xl sm:text-2xl font-semibold tracking-tight">Configuracoes</h1>
         <p className="text-sm text-muted-foreground mt-1">
-          Gerencie seu perfil e conexão WhatsApp
+          Gerencie seu perfil e conexao WhatsApp
         </p>
       </div>
 
@@ -68,9 +81,13 @@ export default function SettingsPage() {
             <span className="text-sm text-muted-foreground">Nome</span>
             <span className="text-sm font-medium">{user?.name}</span>
           </div>
-          <div className="flex items-center justify-between py-2">
+          <div className="flex items-center justify-between py-2 border-b border-border/50">
             <span className="text-sm text-muted-foreground">Email</span>
             <span className="text-sm font-medium">{user?.email}</span>
+          </div>
+          <div className="flex items-center justify-between py-2">
+            <span className="text-sm text-muted-foreground">Funcao</span>
+            <span className="text-sm font-medium capitalize">{user?.role || "member"}</span>
           </div>
         </div>
       </div>
@@ -108,7 +125,7 @@ export default function SettingsPage() {
           <div className="space-y-4">
             <div>
               <label className="text-sm font-medium mb-1.5 block">
-                Nome da Instância
+                Nome da Instancia
               </label>
               <input
                 type="text"
@@ -155,6 +172,40 @@ export default function SettingsPage() {
               alt="QR Code"
               className="mx-auto rounded-xl border border-border max-w-[250px]"
             />
+          </div>
+        )}
+      </div>
+
+      {/* Members */}
+      <div className="rounded-2xl border border-border bg-card p-5 sm:p-6">
+        <div className="flex items-center gap-3 mb-5">
+          <div className="w-10 h-10 rounded-xl bg-primary/10 flex items-center justify-center">
+            <Users className="h-5 w-5 text-primary" />
+          </div>
+          <h2 className="text-base font-semibold">Equipe</h2>
+        </div>
+
+        {members.length === 0 ? (
+          <p className="text-sm text-muted-foreground">Nenhum membro encontrado</p>
+        ) : (
+          <div className="space-y-2">
+            {members.map((m) => (
+              <div
+                key={m.id}
+                className="flex items-center gap-3 p-3 rounded-xl bg-background border border-border"
+              >
+                <div className="w-9 h-9 rounded-full bg-primary/10 flex items-center justify-center text-primary font-semibold text-sm">
+                  {m.name?.charAt(0)?.toUpperCase() || "?"}
+                </div>
+                <div className="flex-1 min-w-0">
+                  <p className="text-sm font-medium truncate">{m.name}</p>
+                  <p className="text-xs text-muted-foreground truncate">{m.email}</p>
+                </div>
+                <span className="text-xs px-2 py-0.5 rounded-full bg-muted text-muted-foreground capitalize">
+                  {m.role}
+                </span>
+              </div>
+            ))}
           </div>
         )}
       </div>

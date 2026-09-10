@@ -10,14 +10,26 @@ interface Stats {
   active_groups: number;
 }
 
+interface ChartPoint {
+  date: string;
+  sent: number;
+  received: number;
+}
+
 export default function DashboardPage() {
   const [stats, setStats] = useState<Stats | null>(null);
+  const [chart, setChart] = useState<ChartPoint[]>([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    api
-      .getDashboardStats()
-      .then(setStats)
+    Promise.all([
+      api.getDashboardStats(),
+      api.getDashboardChart(7),
+    ])
+      .then(([statsRes, chartRes]) => {
+        setStats(statsRes);
+        setChart(chartRes.data || []);
+      })
       .catch(console.error)
       .finally(() => setLoading(false));
   }, []);
@@ -32,7 +44,7 @@ export default function DashboardPage() {
           bg: "bg-primary/10",
         },
         {
-          label: "Não lidas",
+          label: "Nao lidas",
           value: stats.unread_conversations,
           icon: Inbox,
           color: "text-amber-500",
@@ -62,6 +74,8 @@ export default function DashboardPage() {
       ]
     : [];
 
+  const maxChartValue = Math.max(...chart.map((c) => Math.max(c.sent, c.received)), 1);
+
   if (loading) {
     return (
       <div className="flex items-center justify-center h-full">
@@ -73,9 +87,9 @@ export default function DashboardPage() {
   return (
     <div className="p-4 sm:p-6 lg:p-8 space-y-6 sm:space-y-8 max-w-7xl mx-auto">
       <div>
-        <h1 className="text-xl sm:text-2xl font-semibold tracking-tight">Visão Geral</h1>
+        <h1 className="text-xl sm:text-2xl font-semibold tracking-tight">Visao Geral</h1>
         <p className="text-sm text-muted-foreground mt-1">
-          Acompanhe o desempenho das suas comunicações
+          Acompanhe o desempenho das suas comunicacoes
         </p>
       </div>
 
@@ -97,39 +111,68 @@ export default function DashboardPage() {
         ))}
       </div>
 
+      {/* Chart */}
+      {chart.length > 0 && (
+        <div className="rounded-2xl border border-border bg-card p-5 sm:p-6">
+          <div className="flex items-center justify-between mb-6">
+            <div>
+              <h2 className="text-base font-semibold">Mensagens (7 dias)</h2>
+              <p className="text-xs text-muted-foreground mt-0.5">
+                Enviadas vs Recebidas
+              </p>
+            </div>
+            <div className="flex items-center gap-4 text-xs">
+              <div className="flex items-center gap-1.5">
+                <div className="w-2.5 h-2.5 rounded-full bg-primary" />
+                <span className="text-muted-foreground">Enviadas</span>
+              </div>
+              <div className="flex items-center gap-1.5">
+                <div className="w-2.5 h-2.5 rounded-full bg-purple-500" />
+                <span className="text-muted-foreground">Recebidas</span>
+              </div>
+            </div>
+          </div>
+          <div className="flex items-end gap-2 h-48">
+            {chart.map((point) => {
+              const sentHeight = (point.sent / maxChartValue) * 100;
+              const receivedHeight = (point.received / maxChartValue) * 100;
+              const date = new Date(point.date);
+              const dayLabel = date.toLocaleDateString("pt-BR", { weekday: "short" });
+
+              return (
+                <div key={point.date} className="flex-1 flex flex-col items-center gap-1">
+                  <div className="w-full flex items-end gap-0.5 h-40">
+                    <div
+                      className="flex-1 bg-primary rounded-t-md transition-all duration-500 hover:opacity-80"
+                      style={{ height: `${Math.max(sentHeight, 2)}%` }}
+                      title={`Enviadas: ${point.sent}`}
+                    />
+                    <div
+                      className="flex-1 bg-purple-500 rounded-t-md transition-all duration-500 hover:opacity-80"
+                      style={{ height: `${Math.max(receivedHeight, 2)}%` }}
+                      title={`Recebidas: ${point.received}`}
+                    />
+                  </div>
+                  <span className="text-[10px] text-muted-foreground capitalize">{dayLabel}</span>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      )}
+
       <div className="rounded-2xl border border-border bg-card p-6 sm:p-8">
         <div className="flex items-start gap-4">
           <div className="w-10 h-10 sm:w-12 sm:h-12 rounded-xl bg-primary/10 flex items-center justify-center flex-shrink-0">
-            <Zap className="w-5 h-5 sm:w-6 sm:h-6 text-primary" />
+            <Zap className="h-5 w-5 sm:h-6 sm:w-6 text-primary" />
           </div>
           <div>
-            <h2 className="text-base sm:text-lg font-semibold mb-2">Bem-vindo ao WhatsApp SaaS</h2>
-            <p className="text-muted-foreground text-sm leading-relaxed max-w-2xl">
-              Conecte seu WhatsApp para começar a gerenciar suas conversas em tempo real.
-              Acesse <strong className="text-foreground">Inbox</strong> para ver suas mensagens
-              ou <strong className="text-foreground">Configurações</strong> para conectar sua instância.
+            <h3 className="font-semibold mb-1">WhatsApp SaaS</h3>
+            <p className="text-sm text-muted-foreground leading-relaxed">
+              Gerencie suas comunicacoes profissionais de forma inteligente.
+              Conecte seu WhatsApp, organize conversas, atribua equipes e acompanhe metricas em tempo real.
             </p>
           </div>
-        </div>
-      </div>
-
-      <div className="mt-6 rounded-2xl border border-border bg-card p-6 sm:p-8">
-        <h3 className="text-sm font-medium text-muted-foreground mb-4">Atividade Hoje</h3>
-        <div className="flex items-center justify-between mb-4">
-          <span className="text-sm text-muted-foreground">Mensagens enviadas</span>
-          <span className="text-sm font-medium text-primary">{stats?.messages_sent_today || 0}</span>
-        </div>
-        <div className="flex h-8 w-full items-center justify-between text-xs">
-          <div className="w-24 h-4 bg-primary/40 rounded-full overflow-hidden">
-            <div className="h-4 bg-primary" />
-          </div>
-          <div className="w-24 h-4 bg-gray-200 rounded-full overflow-hidden">
-            <div className="h-4 bg-purple-500" />
-          </div>
-        </div>
-        <div className="flex items-center justify-between text-muted-foreground text-sm">
-          <span>Enviados</span>
-          <span>Recebidos</span>
         </div>
       </div>
     </div>
