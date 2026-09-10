@@ -643,6 +643,28 @@ func (h *Handler) SearchMessages(w http.ResponseWriter, r *http.Request) {
 	h.respondJSON(w, http.StatusOK, msgs)
 }
 
+func (h *Handler) AutoArchive(w http.ResponseWriter, r *http.Request) {
+	orgID := middleware.GetOrgID(r.Context())
+
+	var body struct {
+		InactiveDays int `json:"inactive_days"`
+	}
+	json.NewDecoder(r.Body).Decode(&body)
+	if body.InactiveDays <= 0 {
+		body.InactiveDays = 30
+	}
+
+	count, err := h.repo.ArchiveInactiveConversations(r.Context(), orgID, body.InactiveDays)
+	if err != nil {
+		h.respondError(w, http.StatusInternalServerError, err.Error())
+		return
+	}
+	h.respondJSON(w, http.StatusOK, map[string]interface{}{
+		"archived": count,
+		"days":     body.InactiveDays,
+	})
+}
+
 // ── Tag Colors ────────────────────────────────────────────────
 
 func (h *Handler) GetTagColors(w http.ResponseWriter, r *http.Request) {

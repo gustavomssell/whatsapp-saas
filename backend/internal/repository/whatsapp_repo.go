@@ -437,6 +437,21 @@ func (r *WhatsappRepo) UpdateMessageContent(ctx context.Context, orgID, remoteMs
 	return err
 }
 
+func (r *WhatsappRepo) ArchiveInactiveConversations(ctx context.Context, orgID string, inactiveDays int) (int64, error) {
+	result, err := r.db.Exec(ctx,
+		`UPDATE whatsapp_conversations
+		 SET is_archived = TRUE
+		 WHERE org_id = $1
+		   AND is_archived = FALSE
+		   AND last_message_at < NOW() - ($2 || ' days')::INTERVAL`,
+		orgID, inactiveDays,
+	)
+	if err != nil {
+		return 0, err
+	}
+	return result.RowsAffected(), nil
+}
+
 func (r *WhatsappRepo) GetTagColors(ctx context.Context, orgID string) ([]models.TagColor, error) {
 	rows, err := r.db.Query(ctx,
 		`SELECT id, org_id, tag, color, created_at FROM tag_colors WHERE org_id = $1 ORDER BY tag`, orgID,

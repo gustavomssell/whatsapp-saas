@@ -86,6 +86,7 @@ func main() {
 				r.Delete("/conversations/{jid}/messages/{msgId}", h.DeleteMessage)
 				r.Post("/conversations/{jid}/forward", h.ForwardMessage)
 				r.Get("/conversations/{jid}/search", h.SearchMessages)
+				r.Post("/conversations/auto-archive", h.AutoArchive)
 
 				r.Get("/quick-replies", h.ListQuickReplies)
 				r.Post("/quick-replies", h.CreateQuickReply)
