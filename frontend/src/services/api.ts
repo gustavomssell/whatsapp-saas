@@ -1,235 +1,131 @@
-const API_BASE = "/api";
-
-async function request<T>(path: string, options?: RequestInit): Promise<T> {
-  const token = localStorage.getItem("wpsaas-auth");
-  let parsed: { state?: { token?: string } } = {};
-  try {
-    parsed = JSON.parse(token || "{}");
-  } catch {
-    parsed = {};
-  }
-  const authToken = parsed?.state?.token;
-
-  const headers: Record<string, string> = {
-    "Content-Type": "application/json",
-    ...(options?.headers as Record<string, string>),
-  };
-  if (authToken) {
-    headers["Authorization"] = `Bearer ${authToken}`;
-  }
-
-  const res = await fetch(`${API_BASE}${path}`, { ...options, headers });
-
-  if (res.status === 401) {
-    localStorage.removeItem("wpsaas-auth");
-    window.location.href = "/login";
-    throw new Error("Unauthorized");
-  }
-
-  const data = await res.json();
-  if (!res.ok) {
-    throw new Error(data.error || "Erro na requisição");
-  }
-  return data as T;
-}
+import { apiClient } from "@/lib/apiClient";
 
 export const api = {
   login: (email: string, password: string) =>
-    request<{ token: string; user: any }>("/auth/login", {
-      method: "POST",
-      body: JSON.stringify({ email, password }),
-    }),
+    apiClient.post<{ token: string; user: any }>("/auth/login", { email, password }).then((r) => r.data),
 
   register: (name: string, email: string, password: string, org_name: string) =>
-    request<{ token: string; user: any }>("/auth/register", {
-      method: "POST",
-      body: JSON.stringify({ name, email, password, org_name }),
-    }),
+    apiClient.post<{ token: string; user: any }>("/auth/register", { name, email, password, org_name }).then((r) => r.data),
 
-  getProfile: () => request<{ user_id: string; org_id: string }>("/auth/profile"),
+  getProfile: () =>
+    apiClient.get<{ user_id: string; org_id: string }>("/auth/profile").then((r) => r.data),
 
-  getConversations: (params?: Record<string, string>) => {
-    const qs = params ? "?" + new URLSearchParams(params).toString() : "";
-    return request<{ data: any[]; total: number }>(`/whatsapp/conversations${qs}`);
-  },
+  getConversations: (params?: Record<string, string>) =>
+    apiClient.get<{ data: any[]; total: number }>("/whatsapp/conversations", { params }).then((r) => r.data),
 
   getMessages: (jid: string) =>
-    request<any[]>(`/whatsapp/conversations/${encodeURIComponent(jid)}/messages`),
+    apiClient.get<any[]>(`/whatsapp/conversations/${encodeURIComponent(jid)}/messages`).then((r) => r.data),
 
   sendMessage: (jid: string, text: string, quotedMsgId?: string) =>
-    request<any>(`/whatsapp/conversations/${encodeURIComponent(jid)}/messages`, {
-      method: "POST",
-      body: JSON.stringify({ text, quoted_msg_id: quotedMsgId }),
-    }),
+    apiClient.post<any>(`/whatsapp/conversations/${encodeURIComponent(jid)}/messages`, { text, quoted_msg_id: quotedMsgId }).then((r) => r.data),
 
   sendMedia: (jid: string, mediaUrl: string, mediaType: string, caption?: string, quotedMsgId?: string) =>
-    request<any>(`/whatsapp/conversations/${encodeURIComponent(jid)}/media`, {
-      method: "POST",
-      body: JSON.stringify({ media_url: mediaUrl, media_type: mediaType, caption, quoted_msg_id: quotedMsgId }),
-    }),
+    apiClient.post<any>(`/whatsapp/conversations/${encodeURIComponent(jid)}/media`, { media_url: mediaUrl, media_type: mediaType, caption, quoted_msg_id: quotedMsgId }).then((r) => r.data),
 
   sendReaction: (jid: string, msgId: string, emoji: string) =>
-    request<any>(`/whatsapp/conversations/${encodeURIComponent(jid)}/reaction`, {
-      method: "POST",
-      body: JSON.stringify({ msg_id: msgId, emoji }),
-    }),
+    apiClient.post<any>(`/whatsapp/conversations/${encodeURIComponent(jid)}/reaction`, { msg_id: msgId, emoji }).then((r) => r.data),
 
   archiveConversation: (jid: string) =>
-    request<any>(`/whatsapp/conversations/${encodeURIComponent(jid)}/archive`, { method: "POST" }),
+    apiClient.post<any>(`/whatsapp/conversations/${encodeURIComponent(jid)}/archive`).then((r) => r.data),
 
   unarchiveConversation: (jid: string) =>
-    request<any>(`/whatsapp/conversations/${encodeURIComponent(jid)}/unarchive`, { method: "POST" }),
+    apiClient.post<any>(`/whatsapp/conversations/${encodeURIComponent(jid)}/unarchive`).then((r) => r.data),
 
   assignGuide: (jid: string, guide: string) =>
-    request<any>(`/whatsapp/conversations/${encodeURIComponent(jid)}/assign`, {
-      method: "POST",
-      body: JSON.stringify({ guide }),
-    }),
+    apiClient.post<any>(`/whatsapp/conversations/${encodeURIComponent(jid)}/assign`, { guide }).then((r) => r.data),
 
   updateTags: (jid: string, tags: string[]) =>
-    request<any>(`/whatsapp/conversations/${encodeURIComponent(jid)}/tags`, {
-      method: "POST",
-      body: JSON.stringify({ tags }),
-    }),
+    apiClient.post<any>(`/whatsapp/conversations/${encodeURIComponent(jid)}/tags`, { tags }).then((r) => r.data),
 
   pinConversation: (jid: string, pinned: boolean) =>
-    request<any>(`/whatsapp/conversations/${encodeURIComponent(jid)}/pin`, {
-      method: "POST",
-      body: JSON.stringify({ pinned }),
-    }),
+    apiClient.post<any>(`/whatsapp/conversations/${encodeURIComponent(jid)}/pin`, { pinned }).then((r) => r.data),
 
   updateMessageContent: (remoteMsgID: string, content: string) =>
-    request<any>(`/whatsapp/conversations/edit`, {
-      method: "POST",
-      body: JSON.stringify({ msg_id: remoteMsgID, text: content }),
-    }),
+    apiClient.post<any>("/whatsapp/conversations/edit", { msg_id: remoteMsgID, text: content }).then((r) => r.data),
 
   connectWhatsApp: (instanceName: string, webhookUrl: string) =>
-    request<{ qr_code: string }>("/whatsapp/connect", {
-      method: "POST",
-      body: JSON.stringify({ instance_name: instanceName, webhook_url: webhookUrl }),
-    }),
+    apiClient.post<{ qr_code: string }>("/whatsapp/connect", { instance_name: instanceName, webhook_url: webhookUrl }).then((r) => r.data),
 
   getWhatsAppStatus: () =>
-    request<{ status: string; instance_name: string }>("/whatsapp/status"),
+    apiClient.get<{ status: string; instance_name: string }>("/whatsapp/status").then((r) => r.data),
 
   disconnectWhatsApp: () =>
-    request<any>("/whatsapp/disconnect", { method: "POST" }),
+    apiClient.post<any>("/whatsapp/disconnect").then((r) => r.data),
 
-  getDashboardStats: () => request<any>("/dashboard/stats"),
+  getDashboardStats: () =>
+    apiClient.get<any>("/dashboard/stats").then((r) => r.data),
 
-  getDashboardChart: (days?: number) => {
-    const qs = days ? `?days=${days}` : "";
-    return request<{ data: any[] }>(`/dashboard/chart${qs}`);
-  },
+  getDashboardChart: (days?: number) =>
+    apiClient.get<{ data: any[] }>("/dashboard/chart", { params: days ? { days } : undefined }).then((r) => r.data),
 
-  getGroups: () => request<any[]>("/whatsapp/groups"),
+  getGroups: () =>
+    apiClient.get<any[]>("/whatsapp/groups").then((r) => r.data),
 
   getQuickReplies: () =>
-    request<any[]>("/whatsapp/quick-replies"),
+    apiClient.get<any[]>("/whatsapp/quick-replies").then((r) => r.data),
 
   createQuickReply: (shortcut: string, title: string, content: string, variables?: string[], mediaUrl?: string, mediaType?: string) =>
-    request<any>("/whatsapp/quick-replies", {
-      method: "POST",
-      body: JSON.stringify({ shortcut, title, content, variables, media_url: mediaUrl || "", media_type: mediaType || "" }),
-    }),
+    apiClient.post<any>("/whatsapp/quick-replies", { shortcut, title, content, variables, media_url: mediaUrl || "", media_type: mediaType || "" }).then((r) => r.data),
 
   deleteQuickReply: (qrId: string) =>
-    request<any>(`/whatsapp/quick-replies/${qrId}`, { method: "DELETE" }),
+    apiClient.delete<any>(`/whatsapp/quick-replies/${qrId}`).then((r) => r.data),
 
   deleteMessage: (jid: string, msgId: string, forEveryone: boolean) =>
-    request<any>(`/whatsapp/conversations/${encodeURIComponent(jid)}/messages/${encodeURIComponent(msgId)}`, {
-      method: "DELETE",
-      body: JSON.stringify({ for_everyone: forEveryone }),
-    }),
+    apiClient.delete<any>(`/whatsapp/conversations/${encodeURIComponent(jid)}/messages/${encodeURIComponent(msgId)}`, { data: { for_everyone: forEveryone } }).then((r) => r.data),
 
   forwardMessage: (jid: string, msgId: string) =>
-    request<any>(`/whatsapp/conversations/${encodeURIComponent(jid)}/forward`, {
-      method: "POST",
-      body: JSON.stringify({ msg_id: msgId }),
-    }),
+    apiClient.post<any>(`/whatsapp/conversations/${encodeURIComponent(jid)}/forward`, { msg_id: msgId }).then((r) => r.data),
 
   searchMessages: (jid: string, query: string) =>
-    request<any[]>(`/whatsapp/conversations/${encodeURIComponent(jid)}/search?q=${encodeURIComponent(query)}`),
+    apiClient.get<any[]>(`/whatsapp/conversations/${encodeURIComponent(jid)}/search`, { params: { q: query } }).then((r) => r.data),
 
   editMessage: (jid: string, msgId: string, text: string) =>
-    request<any>(`/whatsapp/conversations/${encodeURIComponent(jid)}/edit`, {
-      method: "POST",
-      body: JSON.stringify({ msg_id: msgId, text }),
-    }),
+    apiClient.post<any>(`/whatsapp/conversations/${encodeURIComponent(jid)}/edit`, { msg_id: msgId, text }).then((r) => r.data),
 
   getTagColors: () =>
-    request<any[]>("/whatsapp/tag-colors"),
+    apiClient.get<any[]>("/whatsapp/tag-colors").then((r) => r.data),
 
   setTagColor: (tag: string, color: string) =>
-    request<any>("/whatsapp/tag-colors", {
-      method: "POST",
-      body: JSON.stringify({ tag, color }),
-    }),
+    apiClient.post<any>("/whatsapp/tag-colors", { tag, color }).then((r) => r.data),
 
   deleteTagColor: (tag: string) =>
-    request<any>(`/whatsapp/tag-colors/${encodeURIComponent(tag)}`, { method: "DELETE" }),
+    apiClient.delete<any>(`/whatsapp/tag-colors/${encodeURIComponent(tag)}`).then((r) => r.data),
 
   getNotes: (convJid: string) =>
-    request<{ data: any[] }>(`/whatsapp/conversations/${encodeURIComponent(convJid)}/notes`),
+    apiClient.get<{ data: any[] }>(`/whatsapp/conversations/${encodeURIComponent(convJid)}/notes`).then((r) => r.data),
 
   createNote: (convJid: string, userName: string, content: string) =>
-    request<any>(`/whatsapp/conversations/${encodeURIComponent(convJid)}/notes`, {
-      method: "POST",
-      body: JSON.stringify({ user_name: userName, content }),
-    }),
+    apiClient.post<any>(`/whatsapp/conversations/${encodeURIComponent(convJid)}/notes`, { user_name: userName, content }).then((r) => r.data),
 
-  getContacts: (query?: string) => {
-    const qs = query ? `?q=${encodeURIComponent(query)}` : "";
-    return request<{ data: any[] }>(`/whatsapp/contacts${qs}`);
-  },
+  getContacts: (query?: string) =>
+    apiClient.get<{ data: any[] }>("/whatsapp/contacts", { params: query ? { q: query } : undefined }).then((r) => r.data),
 
   getMembers: () =>
-    request<{ data: any[] }>("/members"),
+    apiClient.get<{ data: any[] }>("/members").then((r) => r.data),
 
   getPlans: () =>
-    request<any[]>("/billing/plans"),
+    apiClient.get<any[]>("/billing/plans").then((r) => r.data),
 
   getOrgPlan: () =>
-    request<any>("/billing/plan"),
+    apiClient.get<any>("/billing/plan").then((r) => r.data),
 
   subscribePlan: (planName: string, billingCycle: string = "monthly") =>
-    request<any>("/billing/subscribe", {
-      method: "POST",
-      body: JSON.stringify({ plan_name: planName, billing_cycle: billingCycle }),
-    }),
+    apiClient.post<any>("/billing/subscribe", { plan_name: planName, billing_cycle: billingCycle }).then((r) => r.data),
 
   cancelSubscription: () =>
-    request<any>("/billing/cancel", { method: "POST" }),
+    apiClient.post<any>("/billing/cancel").then((r) => r.data),
 
   getUsage: (period?: string) =>
-    request<any>(`/billing/usage${period ? `?period=${period}` : ""}`),
+    apiClient.get<any>("/billing/usage", { params: period ? { period } : undefined }).then((r) => r.data),
 
   getInvoices: () =>
-    request<any[]>("/billing/invoices"),
+    apiClient.get<any[]>("/billing/invoices").then((r) => r.data),
 
-  uploadFile: async (file: File) => {
-    const token = localStorage.getItem("wpsaas-auth");
-    let parsed: { state?: { token?: string } } = {};
-    try {
-      parsed = JSON.parse(token || "{}");
-    } catch {
-      parsed = {};
-    }
-    const authToken = parsed?.state?.token;
-
+  uploadFile: (file: File) => {
     const formData = new FormData();
     formData.append("file", file);
-
-    const res = await fetch(`${API_BASE}/upload`, {
-      method: "POST",
-      headers: { Authorization: `Bearer ${authToken}` },
-      body: formData,
-    });
-
-    if (!res.ok) {
-      throw new Error("Erro no upload");
-    }
-    return res.json() as Promise<{ url: string; fileName: string; mimeType: string }>;
+    return apiClient.post<{ url: string; fileName: string; mimeType: string }>("/upload", formData, {
+      headers: { "Content-Type": "multipart/form-data" },
+    }).then((r) => r.data);
   },
 };
