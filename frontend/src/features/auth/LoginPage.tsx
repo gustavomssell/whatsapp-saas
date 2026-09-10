@@ -1,10 +1,13 @@
 import { useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
+import { useTranslation } from "react-i18next";
 import { useAuthStore } from "@/store/authStore";
 import { api } from "@/services/api";
 import { Zap, ArrowRight } from "lucide-react";
+import LanguageSwitch from "@/components/LanguageSwitch";
 
 export default function LoginPage() {
+  const { t } = useTranslation();
   const navigate = useNavigate();
   const setAuth = useAuthStore((s) => s.setAuth);
   const [email, setEmail] = useState("");
@@ -21,7 +24,7 @@ export default function LoginPage() {
       setAuth(res.token, res.user);
       navigate("/");
     } catch (err: any) {
-      setError(err.message || "Erro ao fazer login");
+      setError(err.message || t("auth.invalidCredentials"));
     } finally {
       setLoading(false);
     }
@@ -29,6 +32,10 @@ export default function LoginPage() {
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-background p-4">
+      <div className="absolute top-4 right-4">
+        <LanguageSwitch />
+      </div>
+
       <div className="w-full max-w-md">
         <div className="flex items-center justify-center gap-2.5 mb-10">
           <div className="w-10 h-10 rounded-xl bg-primary/10 flex items-center justify-center">
@@ -38,9 +45,9 @@ export default function LoginPage() {
         </div>
 
         <div className="rounded-2xl border border-border bg-card p-8 shadow-sm">
-          <h1 className="text-xl font-semibold mb-1">Bem-vindo de volta</h1>
+          <h1 className="text-xl font-semibold mb-1">{t("auth.loginTitle")}</h1>
           <p className="text-sm text-muted-foreground mb-6">
-            Entre para gerenciar seu WhatsApp profissional
+            {t("auth.loginSubtitle")}
           </p>
 
           {error && (
@@ -52,7 +59,7 @@ export default function LoginPage() {
           <form onSubmit={handleSubmit} className="space-y-4">
             <div>
               <label className="text-sm font-medium mb-1.5 block">
-                Email
+                {t("auth.email")}
               </label>
               <input
                 type="email"
@@ -66,7 +73,7 @@ export default function LoginPage() {
 
             <div>
               <label className="text-sm font-medium mb-1.5 block">
-                Senha
+                {t("auth.password")}
               </label>
               <input
                 type="password"
@@ -87,7 +94,7 @@ export default function LoginPage() {
                 <div className="w-4 h-4 border-2 border-primary-foreground/30 border-t-primary-foreground rounded-full animate-spin" />
               ) : (
                 <>
-                  Entrar
+                  {t("auth.loginButton")}
                   <ArrowRight className="w-4 h-4" />
                 </>
               )}
@@ -96,12 +103,12 @@ export default function LoginPage() {
 
           <div className="mt-6 pt-6 border-t border-border text-center">
             <p className="text-sm text-muted-foreground">
-              Não tem conta?{" "}
+              {t("auth.noAccount")}{" "}
               <Link
                 to="/register"
                 className="text-primary hover:opacity-80 font-medium transition-opacity"
               >
-                Criar conta gratuita
+                {t("auth.createAccount")}
               </Link>
             </p>
           </div>
