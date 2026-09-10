@@ -1,5 +1,6 @@
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
+import { useTranslation } from "react-i18next";
 import { useAuthStore } from "@/store/authStore";
 import { api } from "@/services/api";
 import { QrCode, User, Zap, ArrowRight, Users, CreditCard } from "lucide-react";
@@ -12,6 +13,7 @@ interface Member {
 }
 
 export default function SettingsPage() {
+  const { t } = useTranslation();
   const navigate = useNavigate();
   const { user } = useAuthStore();
   const [instanceName, setInstanceName] = useState("");
@@ -66,9 +68,9 @@ export default function SettingsPage() {
   return (
     <div className="p-4 sm:p-6 lg:p-8 space-y-6 max-w-3xl mx-auto">
       <div>
-        <h1 className="text-xl sm:text-2xl font-semibold tracking-tight">Configuracoes</h1>
+        <h1 className="text-xl sm:text-2xl font-semibold tracking-tight">{t("settings.title")}</h1>
         <p className="text-sm text-muted-foreground mt-1">
-          Gerencie seu perfil e conexao WhatsApp
+          {t("settings.subtitle")}
         </p>
       </div>
 
@@ -78,19 +80,19 @@ export default function SettingsPage() {
           <div className="w-10 h-10 rounded-xl bg-primary/10 flex items-center justify-center">
             <User className="h-5 w-5 text-primary" />
           </div>
-          <h2 className="text-base font-semibold">Perfil</h2>
+          <h2 className="text-base font-semibold">{t("settings.profile")}</h2>
         </div>
         <div className="space-y-4">
           <div className="flex items-center justify-between py-2 border-b border-border/50">
-            <span className="text-sm text-muted-foreground">Nome</span>
+            <span className="text-sm text-muted-foreground">{t("settings.name")}</span>
             <span className="text-sm font-medium">{user?.name}</span>
           </div>
           <div className="flex items-center justify-between py-2 border-b border-border/50">
-            <span className="text-sm text-muted-foreground">Email</span>
+            <span className="text-sm text-muted-foreground">{t("settings.email")}</span>
             <span className="text-sm font-medium">{user?.email}</span>
           </div>
           <div className="flex items-center justify-between py-2">
-            <span className="text-sm text-muted-foreground">Funcao</span>
+            <span className="text-sm text-muted-foreground">{t("settings.role")}</span>
             <span className="text-sm font-medium capitalize">{user?.role || "member"}</span>
           </div>
         </div>
@@ -102,26 +104,26 @@ export default function SettingsPage() {
           <div className="w-10 h-10 rounded-xl bg-primary/10 flex items-center justify-center">
             <Zap className="h-5 w-5 text-primary" />
           </div>
-          <h2 className="text-base font-semibold">WhatsApp</h2>
+          <h2 className="text-base font-semibold">{t("settings.whatsapp")}</h2>
         </div>
 
         <div className="flex items-center gap-3 p-4 rounded-xl bg-background border border-border mb-5">
           {status === "open" ? (
             <>
               <div className="w-2.5 h-2.5 rounded-full bg-primary animate-pulse" />
-              <span className="text-sm font-medium text-primary">Conectado</span>
+              <span className="text-sm font-medium text-primary">{t("settings.connected")}</span>
             </>
           ) : (
             <>
               <div className="w-2.5 h-2.5 rounded-full bg-muted-foreground" />
-              <span className="text-sm text-muted-foreground">Desconectado</span>
+              <span className="text-sm text-muted-foreground">{t("settings.disconnected")}</span>
             </>
           )}
           <button
             onClick={checkStatus}
             className="ml-auto text-xs text-primary hover:opacity-80 font-medium transition-opacity"
           >
-            Verificar status
+            {t("settings.scanQRCode")}
           </button>
         </div>
 
@@ -129,14 +131,14 @@ export default function SettingsPage() {
           <div className="space-y-4">
             <div>
               <label className="text-sm font-medium mb-1.5 block">
-                Nome da Instancia
+                {t("settings.instanceName")}
               </label>
               <input
                 type="text"
                 value={instanceName}
                 onChange={(e) => setInstanceName(e.target.value)}
                 className="w-full px-3.5 py-2.5 rounded-xl border border-border bg-background text-sm placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring/30 focus:border-ring/50 transition-colors"
-                placeholder="minha-instancia"
+                placeholder={t("settings.instancePlaceholder")}
               />
             </div>
             <button
@@ -148,7 +150,7 @@ export default function SettingsPage() {
                 <div className="w-4 h-4 border-2 border-primary-foreground/30 border-t-primary-foreground rounded-full animate-spin" />
               ) : (
                 <>
-                  Conectar WhatsApp
+                  {t("settings.connect")}
                   <ArrowRight className="w-4 h-4" />
                 </>
               )}
@@ -161,7 +163,7 @@ export default function SettingsPage() {
             onClick={handleDisconnect}
             className="w-full py-2.5 px-4 rounded-xl border border-destructive text-destructive font-semibold text-sm hover:bg-destructive/10 transition-colors"
           >
-            Desconectar
+            {t("settings.disconnect")}
           </button>
         )}
 
@@ -169,7 +171,7 @@ export default function SettingsPage() {
           <div className="mt-6 p-4 rounded-xl bg-background border border-border text-center">
             <QrCode className="h-5 w-5 mx-auto mb-3 text-muted-foreground" />
             <p className="text-sm text-muted-foreground mb-3">
-              Escaneie o QR Code com seu WhatsApp
+              {t("settings.scanQRCode")}
             </p>
             <img
               src={qrCode}
@@ -186,13 +188,13 @@ export default function SettingsPage() {
           <div className="w-10 h-10 rounded-xl bg-primary/10 flex items-center justify-center">
             <CreditCard className="h-5 w-5 text-primary" />
           </div>
-          <h2 className="text-base font-semibold">Plano</h2>
+          <h2 className="text-base font-semibold">{t("settings.plan")}</h2>
         </div>
 
         {orgPlan ? (
           <div className="space-y-4">
             <div className="flex items-center justify-between py-2 border-b border-border/50">
-              <span className="text-sm text-muted-foreground">Plano Atual</span>
+              <span className="text-sm text-muted-foreground">{t("settings.currentPlan")}</span>
               <span className="text-sm font-medium">{orgPlan.plan?.display_name || "Gratuito"}</span>
             </div>
             <div className="flex items-center justify-between py-2 border-b border-border/50">
@@ -202,7 +204,7 @@ export default function SettingsPage() {
               </span>
             </div>
             <div className="flex items-center justify-between py-2">
-              <span className="text-sm text-muted-foreground">Mensagens este mês</span>
+              <span className="text-sm text-muted-foreground">{t("settings.usageThisMonth")}</span>
               <span className="text-sm font-medium">
                 {orgPlan.usage?.messages_sent || 0} / {orgPlan.plan?.max_messages_month < 0 ? "∞" : orgPlan.plan?.max_messages_month || 500}
               </span>
@@ -211,7 +213,7 @@ export default function SettingsPage() {
               onClick={() => navigate("/billing")}
               className="w-full flex items-center justify-center gap-2 py-2 px-4 rounded-xl bg-primary/10 text-primary hover:bg-primary/20 transition-colors text-sm font-medium"
             >
-              Gerenciar Plano
+              {t("settings.managePlan")}
               <ArrowRight className="h-4 w-4" />
             </button>
           </div>
@@ -226,11 +228,11 @@ export default function SettingsPage() {
           <div className="w-10 h-10 rounded-xl bg-primary/10 flex items-center justify-center">
             <Users className="h-5 w-5 text-primary" />
           </div>
-          <h2 className="text-base font-semibold">Equipe</h2>
+          <h2 className="text-base font-semibold">{t("settings.team")}</h2>
         </div>
 
         {members.length === 0 ? (
-          <p className="text-sm text-muted-foreground">Nenhum membro encontrado</p>
+          <p className="text-sm text-muted-foreground">{t("settings.noMembers")}</p>
         ) : (
           <div className="space-y-2">
             {members.map((m) => (
