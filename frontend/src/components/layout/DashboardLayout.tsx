@@ -1,4 +1,5 @@
 import { Link, useLocation, useNavigate } from "react-router-dom";
+import { useTranslation } from "react-i18next";
 import { useAuthStore } from "@/store/authStore";
 import {
   LayoutDashboard,
@@ -15,26 +16,28 @@ import {
 import { useState, useEffect } from "react";
 import { cn } from "@/lib/utils";
 import ThemeSwitch from "@/components/ThemeSwitch";
-
-const navItems = [
-  { path: "/", label: "Início", icon: LayoutDashboard },
-  { path: "/inbox", label: "WhatsApp Inbox", icon: MessageSquare },
-  { path: "/groups", label: "Grupos", icon: Users },
-  { path: "/billing", label: "Planos", icon: CreditCard },
-  { path: "/settings", label: "Configurações", icon: Settings },
-];
+import LanguageSwitch from "@/components/LanguageSwitch";
 
 export default function DashboardLayout({
   children,
 }: {
   children: React.ReactNode;
 }) {
+  const { t } = useTranslation();
   const location = useLocation();
   const navigate = useNavigate();
   const { user, logout } = useAuthStore();
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [collapsed, setCollapsed] = useState(false);
   const [isMobile, setIsMobile] = useState(false);
+
+  const navItems = [
+    { path: "/", label: t("sidebar.dashboard"), icon: LayoutDashboard },
+    { path: "/inbox", label: t("sidebar.inbox"), icon: MessageSquare },
+    { path: "/groups", label: t("sidebar.groups"), icon: Users },
+    { path: "/billing", label: t("sidebar.billing"), icon: CreditCard },
+    { path: "/settings", label: t("sidebar.settings"), icon: Settings },
+  ];
 
   useEffect(() => {
     const check = () => setIsMobile(window.innerWidth < 1024);
@@ -145,7 +148,10 @@ export default function DashboardLayout({
             "flex items-center mb-3",
             (collapsed && !isMobile) ? "justify-center" : "justify-between"
           )}>
-            <ThemeSwitch />
+            <div className="flex items-center gap-1">
+              <LanguageSwitch />
+              <ThemeSwitch />
+            </div>
             {!isMobile && (
               <button
                 onClick={() => setCollapsed(!collapsed)}
@@ -176,7 +182,7 @@ export default function DashboardLayout({
                 <button
                   onClick={handleLogout}
                   className="p-1.5 rounded-md hover:bg-accent text-muted-foreground transition-colors"
-                  title="Sair"
+                  title={t("sidebar.logout")}
                 >
                   <LogOut className="h-4 w-4" />
                 </button>
@@ -186,7 +192,7 @@ export default function DashboardLayout({
               <button
                 onClick={handleLogout}
                 className="p-1.5 rounded-md hover:bg-accent text-muted-foreground transition-colors"
-                title="Sair"
+                title={t("sidebar.logout")}
               >
                 <LogOut className="h-4 w-4" />
               </button>
