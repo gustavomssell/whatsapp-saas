@@ -23,6 +23,80 @@ SaaS para gestão de WhatsApp profissional. Multi-tenant com autenticação JWT,
 
 ---
 
+## Git e GitFlow
+
+### Branching Model
+
+```
+main                  # Produção estável, sempre deployável
+  └── develop         # Integração de todas as features
+       ├── feature/*  # Novas funcionalidades
+       ├── hotfix/*   # Correções urgentes em produção
+       └── release/*  # Preparação de release
+```
+
+### Fluxo de Trabalho
+
+| Ação | Comando | Branch Destino |
+|---|---|---|
+| Nova feature | `git checkout -b feature/nome-da-feature develop` | `develop` |
+| Bugfix | `git checkout -b hotfix/nome-do-fix main` | `main` + `develop` |
+| Release | `git checkout -b release/v1.x.x develop` | `main` |
+
+### Regras
+
+1. **Nunca commitar direto em `main`** — apenas via PR ou merge de release/hotfix
+2. **`develop` é a branch de integração** — todas as features convergem aqui
+3. **Feature branches** devem ser nomeadas: `feature/curta-descricao`
+4. **Hotfix branches** devem ser nomeadas: `hotfix/curta-descricao`
+5. **Squash commits** ao merge de feature em develop (manter histórico limpo)
+6. **Tag em cada release** no `main`: `git tag -a v1.0.0 -m "Release 1.0.0"`
+
+### Conventional Commits
+
+```
+<tipo>(escopo): <descrição>
+
+Tipos:
+  feat     → Nova funcionalidade
+  fix      → Correção de bug
+  refactor → Refatoração sem mudar comportamento
+  style    → Formatação, indentation (sem mudança de código)
+  test     → Adição/correção de testes
+  docs     → Documentação
+  chore    → Configurações, dependências, build
+  perf     → Melhoria de performance
+  ci       → Mudanças em CI/CD
+  revert   → Reverter commit anterior
+
+Exemplos:
+  feat(inbox): adicionar busca de contatos
+  fix(backend): corrigir validação de JWT no webhook
+  refactor(frontend): extrair hook useConversations
+  chore: atualizar dependências do frontend
+```
+
+### Commits no Projeto (Português)
+
+Como o projeto usa português, os commits também devem ser em português:
+
+```
+feat(inbox): adicionar painel de notas internas
+fix(backend): corrigir query de busca por JID
+refactor(frontend): converter InboxPage para componentes menores
+chore: adicionar migration para tabela de configurações
+```
+
+### Pré-commit Checklist
+
+- [ ] Código compila sem erros (`go build ./...` / `npm run build`)
+- [ ] Lint passa (`npm run lint` / `golangci-lint run`)
+- [ ] Não há `fmt.Println` ou `console.log` de debug
+- [ ] Não há secrets ou chaves hardcoded
+- [ ] Mensagem de commit segue Conventional Commits
+
+---
+
 ## Estrutura do Projeto
 
 ### Backend (`backend/`)
@@ -75,6 +149,8 @@ migrations/
 | GET | `/api/whatsapp/groups` | Listar grupos |
 | GET | `/api/whatsapp/groups/{groupJid}/messages` | Mensagens do grupo |
 | GET | `/api/dashboard/stats` | Estatísticas |
+| GET | `/api/dashboard/chart` | Dados para gráficos (7/14/30 dias) |
+| GET | `/api/members` | Listar membros da organização |
 | POST | `/api/upload` | Upload de arquivo |
 | POST | `/api/webhook/whatsapp` | Webhook Evolution API |
 | GET | `/ws?token=` | WebSocket |
@@ -97,7 +173,11 @@ src/
 │   ├── inbox/InboxPage.tsx         # WhatsApp Inbox (conversas + chat)
 │   ├── groups/GroupsPage.tsx       # Grupos WhatsApp
 │   └── settings/SettingsPage.tsx   # Perfil + conexão WhatsApp
-├── services/api.ts            # Axios/fetch client com JWT
+├── hooks/
+│   ├── useSocket.ts               # WebSocket hook
+│   ├── useQuickReplies.ts         # Respostas rápidas
+│   └── useNotes.ts                # Notas internas
+├── services/api.ts            # Fetch client com JWT
 ├── store/authStore.ts         # Zustand (token, user, orgId)
 ├── lib/utils.ts               # cn() utility
 └── types/                     # Interfaces TypeScript
@@ -211,15 +291,15 @@ Invoke-RestMethod -Uri "http://localhost:8090/api/auth/login" -Method POST -Body
 
 ## Roadmap
 
-- [ ] WebSocket para mensagens em tempo real
-- [ ] Busca de contatos
-- [ ] Respostas rápidas na UI
-- [ ] Notas internas por conversa
-- [ ] Atribuição de guias
-- [ ] Tags e filtros avançados
-- [ ] Dashboard com gráficos
-- [ ] Upload de imagens/vídeos
-- [ ] Envio de áudio
-- [ ] Citação de mensagens
-- [ ] Edição de mensagens
+- [x] WebSocket para mensagens em tempo real
+- [x] Busca de contatos
+- [x] Respostas rápidas na UI
+- [x] Notas internas por conversa
+- [x] Atribuição de guias
+- [x] Tags e filtros avançados
+- [x] Dashboard com gráficos
+- [x] Upload de imagens/vídeos
+- [x] Envio de áudio
+- [x] Citação de mensagens
+- [x] Edição de mensagens
 - [ ] End-to-end encryption support
