@@ -6,21 +6,23 @@ interface QuickReply {
   shortcut: string;
   title: string;
   content: string;
+  media_url: string;
+  media_type: string;
   variables: string[];
   is_global: boolean;
   created_at: string;
 }
 
-export function useQuickReplies(convJid?: string) {
+export function useQuickReplies() {
   const [data, setData] = useState<QuickReply[]>([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     let cancelled = false;
-    api.getQuickReplies(convJid).then(
+    api.getQuickReplies().then(
       (res) => {
         if (!cancelled) {
-          setData(res.data || []);
+          setData(Array.isArray(res) ? res : (res as any).data || []);
           setLoading(false);
         }
       },
@@ -34,13 +36,13 @@ export function useQuickReplies(convJid?: string) {
     return () => {
       cancelled = true;
     };
-  }, [convJid]);
+  }, []);
 
   const refetch = useCallback(() => {
     setLoading(true);
-    return api.getQuickReplies(convJid).then(
+    return api.getQuickReplies().then(
       (res) => {
-        setData(res.data || []);
+        setData(Array.isArray(res) ? res : (res as any).data || []);
         setLoading(false);
       },
       (err) => {
@@ -48,7 +50,7 @@ export function useQuickReplies(convJid?: string) {
         setLoading(false);
       }
     );
-  }, [convJid]);
+  }, []);
 
   return { data, loading, refetch };
 }
