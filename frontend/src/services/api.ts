@@ -62,10 +62,10 @@ export const api = {
       body: JSON.stringify({ text, quoted_msg_id: quotedMsgId }),
     }),
 
-  sendMedia: (jid: string, mediaUrl: string, mediaType: string, caption?: string) =>
+  sendMedia: (jid: string, mediaUrl: string, mediaType: string, caption?: string, quotedMsgId?: string) =>
     request<any>(`/whatsapp/conversations/${encodeURIComponent(jid)}/media`, {
       method: "POST",
-      body: JSON.stringify({ media_url: mediaUrl, media_type: mediaType, caption }),
+      body: JSON.stringify({ media_url: mediaUrl, media_type: mediaType, caption, quoted_msg_id: quotedMsgId }),
     }),
 
   sendReaction: (jid: string, msgId: string, emoji: string) =>
@@ -86,6 +86,24 @@ export const api = {
       body: JSON.stringify({ guide }),
     }),
 
+  updateTags: (jid: string, tags: string[]) =>
+    request<any>(`/whatsapp/conversations/${encodeURIComponent(jid)}/tags`, {
+      method: "POST",
+      body: JSON.stringify({ tags }),
+    }),
+
+  pinConversation: (jid: string, pinned: boolean) =>
+    request<any>(`/whatsapp/conversations/${encodeURIComponent(jid)}/pin`, {
+      method: "POST",
+      body: JSON.stringify({ pinned }),
+    }),
+
+  updateMessageContent: (remoteMsgID: string, content: string) =>
+    request<any>(`/whatsapp/conversations/${encodeURIComponent(remoteMsgID)}/content`, {
+      method: "POST",
+      body: JSON.stringify({ content }),
+    }),
+
   connectWhatsApp: (instanceName: string, webhookUrl: string) =>
     request<{ qr_code: string }>("/whatsapp/connect", {
       method: "POST",
@@ -100,23 +118,45 @@ export const api = {
 
   getDashboardStats: () => request<any>("/dashboard/stats"),
 
-  getGroups: () => request<any[]>("/whatsapp/groups"),
-
-  getQuickReplies: (convJid?: string) => {
-    const qs = convJid ? `?conv_jid=${convJid}` : "";
-    return request<{ data: any[] }>(`/whatsapp/quick-replies${qs}`);
+  getDashboardChart: (days?: number) => {
+    const qs = days ? `?days=${days}` : "";
+    return request<{ data: any[] }>(`/dashboard/chart${qs}`);
   },
 
-  createQuickReply: (shortcut: string, title: string, content: string, variables?: string[]) =>
+  getGroups: () => request<any[]>("/whatsapp/groups"),
+
+  getQuickReplies: () =>
+    request<any[]>("/whatsapp/quick-replies"),
+
+  createQuickReply: (shortcut: string, title: string, content: string, variables?: string[], mediaUrl?: string, mediaType?: string) =>
     request<any>("/whatsapp/quick-replies", {
       method: "POST",
-      body: JSON.stringify({ shortcut, title, content, variables }),
+      body: JSON.stringify({ shortcut, title, content, variables, media_url: mediaUrl || "", media_type: mediaType || "" }),
     }),
 
   deleteQuickReply: (qrId: string) =>
     request<any>(`/whatsapp/quick-replies/${qrId}`, { method: "DELETE" }),
 
-  getNotes: (convJid: string) => request<{ data: any[] }>(`/whatsapp/conversations/${encodeURIComponent(convJid)}/notes`),
+  deleteMessage: (jid: string, msgId: string, forEveryone: boolean) =>
+    request<any>(`/whatsapp/conversations/${encodeURIComponent(jid)}/messages/${encodeURIComponent(msgId)}`, {
+      method: "DELETE",
+      body: JSON.stringify({ for_everyone: forEveryone }),
+    }),
+
+  getTagColors: () =>
+    request<any[]>("/whatsapp/tag-colors"),
+
+  setTagColor: (tag: string, color: string) =>
+    request<any>("/whatsapp/tag-colors", {
+      method: "POST",
+      body: JSON.stringify({ tag, color }),
+    }),
+
+  deleteTagColor: (tag: string) =>
+    request<any>(`/whatsapp/tag-colors/${encodeURIComponent(tag)}`, { method: "DELETE" }),
+
+  getNotes: (convJid: string) =>
+    request<{ data: any[] }>(`/whatsapp/conversations/${encodeURIComponent(convJid)}/notes`),
 
   createNote: (convJid: string, userName: string, content: string) =>
     request<any>(`/whatsapp/conversations/${encodeURIComponent(convJid)}/notes`, {
@@ -128,6 +168,9 @@ export const api = {
     const qs = query ? `?q=${encodeURIComponent(query)}` : "";
     return request<{ data: any[] }>(`/whatsapp/contacts${qs}`);
   },
+
+  getMembers: () =>
+    request<{ data: any[] }>("/members"),
 
   uploadFile: async (file: File) => {
     const token = localStorage.getItem("wpsaas-auth");
