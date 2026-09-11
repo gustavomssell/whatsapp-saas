@@ -36,7 +36,7 @@ export default function GroupsPage() {
   useEffect(() => {
     api
       .getGroups()
-      .then(setGroups)
+      .then((data) => setGroups(data || []))
       .catch(console.error)
       .finally(() => setLoading(false));
   }, []);
