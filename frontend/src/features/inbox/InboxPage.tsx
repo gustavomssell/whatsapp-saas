@@ -23,6 +23,7 @@ import {
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
+import { FormattedMessage } from "@/components/FormattedMessage";
 import { useTranslation } from "react-i18next";
 
 interface Conversation {
@@ -871,7 +872,7 @@ export default function InboxPage() {
                                 {quotedMsg.from_me ? t("inbox.you") : quotedMsg.sender_name || t("inbox.messageLabel")}
                               </p>
                               <p className="text-xs text-muted-foreground truncate">
-                                {quotedMsg.content}
+                                {quotedMsg.content.slice(0, 60)}
                               </p>
                             </div>
                           )}
@@ -947,7 +948,7 @@ export default function InboxPage() {
                           )}
 
                           <p className="text-sm whitespace-pre-wrap break-words leading-relaxed">
-                            {msg.is_deleted ? t("inbox.deletedMessage") : msg.content}
+                            {msg.is_deleted ? t("inbox.deletedMessage") : <FormattedMessage content={msg.content} />}
                           </p>
 
                           <div className="flex items-center justify-between gap-2 mt-1.5">
