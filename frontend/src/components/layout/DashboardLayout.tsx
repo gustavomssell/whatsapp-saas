@@ -150,18 +150,30 @@ export default function DashboardLayout({
             "flex items-center mb-3",
             (collapsed && !isMobile) ? "justify-center" : "justify-between"
           )}>
-            <div className="flex items-center gap-0.5 min-w-0">
-              <LanguageSwitch />
-              <ThemeSwitch />
-            </div>
-            {!isMobile && (
+            {(collapsed && !isMobile) ? (
               <button
-                onClick={() => setCollapsed(!collapsed)}
-                className="p-1.5 rounded-md hover:bg-accent text-muted-foreground transition-colors flex-shrink-0 ml-1"
-                title={collapsed ? "Expandir sidebar" : "Recolher sidebar"}
+                onClick={() => setCollapsed(false)}
+                className="p-1.5 rounded-md hover:bg-accent text-muted-foreground transition-colors"
+                title="Expandir sidebar"
               >
-                <ChevronLeft className={cn("h-4 w-4 transition-transform", collapsed && "rotate-180")} />
+                <ChevronLeft className="h-4 w-4 rotate-180" />
               </button>
+            ) : (
+              <>
+                <div className="flex items-center gap-0.5 min-w-0">
+                  <LanguageSwitch />
+                  <ThemeSwitch />
+                </div>
+                {!isMobile && (
+                  <button
+                    onClick={() => setCollapsed(true)}
+                    className="p-1.5 rounded-md hover:bg-accent text-muted-foreground transition-colors flex-shrink-0 ml-1"
+                    title="Recolher sidebar"
+                  >
+                    <ChevronLeft className="h-4 w-4" />
+                  </button>
+                )}
+              </>
             )}
           </div>
 
@@ -189,15 +201,6 @@ export default function DashboardLayout({
                   <LogOut className="h-4 w-4" />
                 </button>
               </>
-            )}
-            {(collapsed && !isMobile) && (
-              <button
-                onClick={handleLogout}
-                className="p-1.5 rounded-md hover:bg-accent text-muted-foreground transition-colors"
-                title={t("sidebar.logout")}
-              >
-                <LogOut className="h-4 w-4" />
-              </button>
             )}
           </div>
         </div>
