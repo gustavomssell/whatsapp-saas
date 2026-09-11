@@ -20,6 +20,8 @@ import {
   Check,
   Smile,
   Trash2,
+  Pause,
+  Play,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
@@ -98,8 +100,12 @@ export default function InboxPage() {
 
   // Audio recording
   const [isRecording, setIsRecording] = useState(false);
+  const [isPaused, setIsPaused] = useState(false);
+  const [recordingTime, setRecordingTime] = useState(0);
   const mediaRecorderRef = useRef<MediaRecorder | null>(null);
   const audioChunksRef = useRef<Blob[]>([]);
+  const recordingIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  const streamRef = useRef<MediaStream | null>(null);
 
   // Panels
   const [showNotes, setShowNotes] = useState(false);
@@ -218,6 +224,15 @@ export default function InboxPage() {
     }
   }, [jid, conversations]);
 
+  useEffect(() => {
+    return () => {
+      if (recordingIntervalRef.current) {
+        clearInterval(recordingIntervalRef.current);
+      }
+      streamRef.current?.getTracks().forEach((t) => t.stop());
+    };
+  }, []);
+
   const loadMessages = async (convJid: string, reset: boolean = false) => {
     if (loadingMore && !reset) return;
     setLoadingMore(true);
@@ -297,6 +312,7 @@ export default function InboxPage() {
   const startRecording = async () => {
     try {
       const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      streamRef.current = stream;
       const mediaRecorder = new MediaRecorder(stream);
       mediaRecorderRef.current = mediaRecorder;
       audioChunksRef.current = [];
@@ -322,14 +338,68 @@ export default function InboxPage() {
 
       mediaRecorder.start();
       setIsRecording(true);
+      setIsPaused(false);
+      setRecordingTime(0);
+      recordingIntervalRef.current = setInterval(() => {
+        setRecordingTime((prev) => prev + 1);
+      }, 1000);
     } catch (err) {
       console.error("Erro ao iniciar gravacao:", err);
     }
   };
 
+  const pauseRecording = () => {
+    if (mediaRecorderRef.current?.state === "recording") {
+      mediaRecorderRef.current.pause();
+      setIsPaused(true);
+      if (recordingIntervalRef.current) {
+        clearInterval(recordingIntervalRef.current);
+        recordingIntervalRef.current = null;
+      }
+    }
+  };
+
+  const resumeRecording = () => {
+    if (mediaRecorderRef.current?.state === "paused") {
+      mediaRecorderRef.current.resume();
+      setIsPaused(false);
+      recordingIntervalRef.current = setInterval(() => {
+        setRecordingTime((prev) => prev + 1);
+      }, 1000);
+    }
+  };
+
   const stopRecording = () => {
+    if (recordingIntervalRef.current) {
+      clearInterval(recordingIntervalRef.current);
+      recordingIntervalRef.current = null;
+    }
     mediaRecorderRef.current?.stop();
+    streamRef.current?.getTracks().forEach((t) => t.stop());
     setIsRecording(false);
+    setIsPaused(false);
+    setRecordingTime(0);
+  };
+
+  const cancelRecording = () => {
+    if (recordingIntervalRef.current) {
+      clearInterval(recordingIntervalRef.current);
+      recordingIntervalRef.current = null;
+    }
+    if (mediaRecorderRef.current?.state !== "inactive") {
+      mediaRecorderRef.current?.stop();
+    }
+    streamRef.current?.getTracks().forEach((t) => t.stop());
+    audioChunksRef.current = [];
+    setIsRecording(false);
+    setIsPaused(false);
+    setRecordingTime(0);
+  };
+
+  const formatRecordingTime = (seconds: number) => {
+    const m = Math.floor(seconds / 60).toString().padStart(2, "0");
+    const s = (seconds % 60).toString().padStart(2, "0");
+    return `${m}:${s}`;
   };
 
   const handleReaction = async (msgId: string, emoji: string) => {
@@ -1147,12 +1217,32 @@ export default function InboxPage() {
                       />
                     </div>
                     {isRecording ? (
-                      <button
-                        onClick={stopRecording}
-                        className="p-2.5 rounded-xl bg-red-500 text-white animate-pulse transition-colors"
-                      >
-                        <Square className="h-5 w-5" />
-                      </button>
+                      <div className="flex items-center gap-2">
+                        <span className="text-xs font-mono text-red-500 animate-pulse">
+                          {formatRecordingTime(recordingTime)}
+                        </span>
+                        <button
+                          onClick={cancelRecording}
+                          className="p-2.5 rounded-xl hover:bg-red-500/10 text-red-500 transition-colors"
+                          title={t("inbox.cancelRecording")}
+                        >
+                          <X className="h-5 w-5" />
+                        </button>
+                        <button
+                          onClick={isPaused ? resumeRecording : pauseRecording}
+                          className="p-2.5 rounded-xl hover:bg-yellow-500/10 text-yellow-500 transition-colors"
+                          title={isPaused ? t("inbox.resumeRecording") : t("inbox.pauseRecording")}
+                        >
+                          {isPaused ? <Play className="h-5 w-5" /> : <Pause className="h-5 w-5" />}
+                        </button>
+                        <button
+                          onClick={stopRecording}
+                          className="p-2.5 rounded-xl bg-red-500 text-white animate-pulse transition-colors"
+                          title={t("inbox.sendRecording")}
+                        >
+                          <Square className="h-5 w-5" />
+                        </button>
+                      </div>
                     ) : (
                       <button
                         onClick={startRecording}

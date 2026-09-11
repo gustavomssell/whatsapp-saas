@@ -142,7 +142,12 @@
     "poll": "Enquete",
     "file": "Arquivo",
     "(edited)": "(editada)",
-    "resultsFound": "resultado(s) encontrado(s)"
+    "resultsFound": "resultado(s) encontrado(s)",
+    "recording": "Gravando",
+    "pauseRecording": "Pausar",
+    "resumeRecording": "Retomar",
+    "cancelRecording": "Cancelar",
+    "sendRecording": "Enviar"
   },
   "groups": {
     "title": "Grupos",
