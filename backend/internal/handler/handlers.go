@@ -22,13 +22,14 @@ type Handler struct {
 	auth    *service.AuthService
 	wa      *service.WhatsappService
 	repo    *repository.WhatsappRepo
+	contacts *repository.ContactRepo
 	billing *repository.BillingRepo
 	upload  *service.UploadService
 	hub     *socket.Hub
 }
 
-func NewHandler(auth *service.AuthService, wa *service.WhatsappService, repo *repository.WhatsappRepo, billing *repository.BillingRepo, upload *service.UploadService, hub *socket.Hub) *Handler {
-	return &Handler{auth: auth, wa: wa, repo: repo, billing: billing, upload: upload, hub: hub}
+func NewHandler(auth *service.AuthService, wa *service.WhatsappService, repo *repository.WhatsappRepo, contacts *repository.ContactRepo, billing *repository.BillingRepo, upload *service.UploadService, hub *socket.Hub) *Handler {
+	return &Handler{auth: auth, wa: wa, repo: repo, contacts: contacts, billing: billing, upload: upload, hub: hub}
 }
 
 func (h *Handler) respondJSON(w http.ResponseWriter, status int, data interface{}) {

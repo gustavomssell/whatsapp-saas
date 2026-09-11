@@ -236,6 +236,22 @@ type OrgPlanInfo struct {
 	HasFeature    func(string) bool `json:"-"`
 }
 
+type WhatsappContact struct {
+	ID          string    `json:"id" db:"id"`
+	OrgID       string    `json:"org_id" db:"org_id"`
+	Phone       string    `json:"phone" db:"phone"`
+	Name        string    `json:"name" db:"name"`
+	Email       string    `json:"email" db:"email"`
+	Company     string    `json:"company" db:"company"`
+	Tags        []string  `json:"tags" db:"tags"`
+	Notes       string    `json:"notes" db:"notes"`
+	AvatarURL   string    `json:"avatar_url" db:"avatar_url"`
+	IsWhatsApp  bool      `json:"is_whatsapp" db:"is_whatsapp"`
+	IsMyContact bool      `json:"is_my_contact" db:"is_my_contact"`
+	CreatedAt   time.Time `json:"created_at" db:"created_at"`
+	UpdatedAt   time.Time `json:"updated_at" db:"updated_at"`
+}
+
 type APIKey struct {
 	ID          string          `json:"id" db:"id"`
 	OrgID       string          `json:"org_id" db:"org_id"`

@@ -100,6 +100,38 @@ export const api = {
   getContacts: (query?: string) =>
     apiClient.get<{ data: any[] }>("/whatsapp/contacts", { params: query ? { q: query } : undefined }).then((r) => r.data),
 
+  listContacts: (params?: { search?: string; tag?: string; page?: number; per_page?: number }) =>
+    apiClient.get<{ data: any[]; total: number }>("/contacts", { params }).then((r) => r.data),
+
+  getContact: (contactId: string) =>
+    apiClient.get<any>(`/contacts/${contactId}`).then((r) => r.data),
+
+  createContact: (data: { phone: string; name?: string; email?: string; company?: string; tags?: string[]; notes?: string; avatar_url?: string; is_whatsapp?: boolean }) =>
+    apiClient.post<any>("/contacts", data).then((r) => r.data),
+
+  updateContact: (contactId: string, data: { name?: string; email?: string; company?: string; tags?: string[]; notes?: string; avatar_url?: string; is_whatsapp?: boolean }) =>
+    apiClient.put<any>(`/contacts/${contactId}`, data).then((r) => r.data),
+
+  deleteContact: (contactId: string) =>
+    apiClient.delete<any>(`/contacts/${contactId}`).then((r) => r.data),
+
+  syncContactsFromWhatsApp: () =>
+    apiClient.post<any>("/contacts/sync").then((r) => r.data),
+
+  exportContactsCSV: () =>
+    apiClient.get("/contacts/export", { responseType: "blob" } as any).then((r) => r.data),
+
+  importContactsCSV: (file: File) => {
+    const formData = new FormData();
+    formData.append("file", file);
+    return apiClient.post<any>("/contacts/import", formData, {
+      headers: { "Content-Type": "multipart/form-data" },
+    }).then((r) => r.data);
+  },
+
+  bulkDeleteContacts: (ids: string[]) =>
+    apiClient.post<any>("/contacts/bulk-delete", { ids }).then((r) => r.data),
+
   getMembers: () =>
     apiClient.get<{ data: any[] }>("/members").then((r) => r.data),
 
