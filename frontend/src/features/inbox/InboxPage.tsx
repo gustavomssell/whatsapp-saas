@@ -486,6 +486,17 @@ export default function InboxPage() {
     }
   };
 
+  const scrollToMessage = (msgId: string) => {
+    const el = document.getElementById(`msg-${msgId}`);
+    if (el) {
+      el.scrollIntoView({ behavior: "smooth", block: "center" });
+      el.classList.add("ring-2", "ring-primary/50", "rounded-2xl");
+      setTimeout(() => {
+        el.classList.remove("ring-2", "ring-primary/50", "rounded-2xl");
+      }, 2000);
+    }
+  };
+
   const formatTime = (ts: string) => {
     const d = new Date(ts);
     return d.toLocaleTimeString(i18n.language || "pt-BR", { hour: "2-digit", minute: "2-digit" });
@@ -846,6 +857,8 @@ export default function InboxPage() {
                     return (
                       <div
                         key={msg.id}
+                        id={`msg-${msg.remote_msg_id}`}
+                        data-msg-id={msg.remote_msg_id}
                         className={cn(
                           "flex group",
                           msg.from_me ? "justify-end" : "justify-start"
@@ -867,7 +880,10 @@ export default function InboxPage() {
                           )}
 
                           {quotedMsg && (
-                            <div className="mb-2 p-2 rounded-lg bg-background/50 border-l-2 border-primary/40">
+                            <div
+                              onClick={() => scrollToMessage(quotedMsg.remote_msg_id)}
+                              className="mb-2 p-2 rounded-lg bg-background/50 border-l-2 border-primary/40 cursor-pointer hover:bg-background/80 transition-colors"
+                            >
                               <p className="text-[10px] text-primary font-medium">
                                 {quotedMsg.from_me ? t("inbox.you") : quotedMsg.sender_name || t("inbox.messageLabel")}
                               </p>
