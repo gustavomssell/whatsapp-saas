@@ -12,6 +12,7 @@ import {
   X,
   Zap,
   ChevronLeft,
+  Contact,
 } from "lucide-react";
 import { useState, useEffect } from "react";
 import { cn } from "@/lib/utils";
@@ -35,6 +36,7 @@ export default function DashboardLayout({
     { path: "/", label: t("sidebar.dashboard"), icon: LayoutDashboard },
     { path: "/inbox", label: t("sidebar.inbox"), icon: MessageSquare },
     { path: "/groups", label: t("sidebar.groups"), icon: Users },
+    { path: "/contacts", label: t("sidebar.contacts", "Contatos"), icon: Contact },
     { path: "/billing", label: t("sidebar.billing"), icon: CreditCard },
     { path: "/settings", label: t("sidebar.settings"), icon: Settings },
   ];

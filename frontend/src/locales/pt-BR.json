@@ -60,6 +60,7 @@
     "dashboard": "Início",
     "inbox": "WhatsApp Inbox",
     "groups": "Grupos",
+    "contacts": "Contatos",
     "billing": "Planos",
     "settings": "Configurações",
     "logout": "Sair"
@@ -233,6 +234,15 @@
     "en": "English",
     "es": "Español",
     "switch": "Idioma"
+  },
+  "contacts": {
+    "title": "Contatos",
+    "searchPlaceholder": "Buscar contato...",
+    "noContacts": "Nenhum contato encontrado",
+    "noMatches": "Nenhum contato corresponde à busca",
+    "noName": "Sem nome",
+    "saved": "Salvo",
+    "count": "{{count}} contatos"
   },
   "theme": {
     "system": "Sistema",

@@ -60,6 +60,7 @@
     "dashboard": "Inicio",
     "inbox": "WhatsApp Inbox",
     "groups": "Grupos",
+    "contacts": "Contactos",
     "billing": "Planes",
     "settings": "Configuración",
     "logout": "Cerrar sesión"
@@ -233,6 +234,15 @@
     "en": "English",
     "es": "Español",
     "switch": "Idioma"
+  },
+  "contacts": {
+    "title": "Contactos",
+    "searchPlaceholder": "Buscar contacto...",
+    "noContacts": "No se encontraron contactos",
+    "noMatches": "Ningún contacto coincide con la búsqueda",
+    "noName": "Sin nombre",
+    "saved": "Guardado",
+    "count": "{{count}} contactos"
   },
   "theme": {
     "system": "Sistema",
