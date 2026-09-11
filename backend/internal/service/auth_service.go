@@ -121,6 +121,18 @@ func (s *AuthService) GetJWTSecret() string {
 	return s.jwtSecret
 }
 
+func (s *AuthService) CheckPassword(password, hash string) bool {
+	return bcrypt.CompareHashAndPassword([]byte(hash), []byte(password)) == nil
+}
+
+func (s *AuthService) HashPassword(password string) (string, error) {
+	hash, err := bcrypt.GenerateFromPassword([]byte(password), bcrypt.DefaultCost)
+	if err != nil {
+		return "", err
+	}
+	return string(hash), nil
+}
+
 func generateSlug(name string) string {
 	slug := ""
 	for _, c := range name {

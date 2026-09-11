@@ -24,6 +24,10 @@ func NewWhatsappService(repo *repository.WhatsappRepo, billing *repository.Billi
 	return &WhatsappService{repo: repo, billing: billing, evolution: evolution, hub: hub}
 }
 
+func (s *WhatsappService) GetEvolutionClient() *EvolutionClient {
+	return s.evolution
+}
+
 func (s *WhatsappService) Connect(ctx context.Context, orgID, instanceName, webhookURL string) (string, error) {
 	resp, err := s.evolution.CreateInstance(instanceName, webhookURL)
 	if err != nil {

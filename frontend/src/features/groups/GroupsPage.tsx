@@ -1,7 +1,18 @@
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { useTranslation } from "react-i18next";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { api } from "@/services/api";
-import { Users, Search, ArrowUpRight, Link2, MessageSquare, X } from "lucide-react";
+import {
+  Users,
+  Search,
+  ArrowUpRight,
+  Link2,
+  MessageSquare,
+  X,
+  Edit,
+  Trash2,
+  Check,
+} from "lucide-react";
 import { cn } from "@/lib/utils";
 
 interface Group {
@@ -13,64 +24,72 @@ interface Group {
   is_archived: boolean;
 }
 
-interface GroupMessage {
-  id: string;
-  sender_name: string;
-  content: string;
-  msg_type: string;
-  media_url: string;
-  media_type: string;
-  from_me: boolean;
-  timestamp: string;
-}
-
 export default function GroupsPage() {
   const { t } = useTranslation();
-  const [groups, setGroups] = useState<Group[]>([]);
-  const [loading, setLoading] = useState(true);
+  const queryClient = useQueryClient();
   const [search, setSearch] = useState("");
   const [selectedGroup, setSelectedGroup] = useState<Group | null>(null);
-  const [messages, setMessages] = useState<GroupMessage[]>([]);
-  const [loadingMessages, setLoadingMessages] = useState(false);
+  const [showEditModal, setShowEditModal] = useState(false);
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+  const [editForm, setEditForm] = useState({ subject: "", description: "" });
+  const [copied, setCopied] = useState(false);
 
-  useEffect(() => {
-    api
-      .getGroups()
-      .then((data) => setGroups(data || []))
-      .catch(console.error)
-      .finally(() => setLoading(false));
-  }, []);
+  const { data: groups = [], isLoading } = useQuery({
+    queryKey: ["groups"],
+    queryFn: () => api.getGroups(),
+  });
 
-  const loadMessages = async (groupJid: string) => {
-    setLoadingMessages(true);
-    try {
-      const msgs = await api.getMessages(groupJid);
-      setMessages(msgs || []);
-    } catch (err) {
-      console.error(err);
-    } finally {
-      setLoadingMessages(false);
-    }
-  };
+  const { data: messages = [], isLoading: loadingMessages } = useQuery({
+    queryKey: ["group-messages", selectedGroup?.group_jid],
+    queryFn: () => api.getMessages(selectedGroup!.group_jid),
+    enabled: !!selectedGroup,
+  });
 
-  useEffect(() => {
-    if (selectedGroup) {
-      loadMessages(selectedGroup.group_jid);
-    }
-  }, [selectedGroup]);
+  const updateMutation = useMutation({
+    mutationFn: ({ groupJid, data }: { groupJid: string; data: { subject: string; description: string } }) =>
+      api.updateGroup(groupJid, data),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["groups"] });
+      setShowEditModal(false);
+    },
+  });
+
+  const deleteMutation = useMutation({
+    mutationFn: (groupJid: string) => api.deleteGroup(groupJid),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["groups"] });
+      setSelectedGroup(null);
+      setShowDeleteConfirm(false);
+    },
+  });
 
   const filtered = groups.filter(
-    (g) =>
-      g.subject.toLowerCase().includes(search.toLowerCase()) ||
-      g.description.toLowerCase().includes(search.toLowerCase())
+    (g: Group) =>
+      g.subject?.toLowerCase().includes(search.toLowerCase()) ||
+      g.description?.toLowerCase().includes(search.toLowerCase())
   );
+
+  const handleCopyInviteLink = async () => {
+    if (!selectedGroup) return;
+    try {
+      const result = await api.getGroupInviteLink(selectedGroup.group_jid);
+      const link = result?.invite_link || result?.link || "";
+      if (link) {
+        navigator.clipboard.writeText(link);
+        setCopied(true);
+        setTimeout(() => setCopied(false), 2000);
+      }
+    } catch (err) {
+      console.error(err);
+    }
+  };
 
   const formatTime = (ts: string) => {
     const d = new Date(ts);
     return d.toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" });
   };
 
-  if (loading) {
+  if (isLoading) {
     return (
       <div className="flex items-center justify-center h-full">
         <div className="w-8 h-8 border-2 border-primary/30 border-t-primary rounded-full animate-spin" />
@@ -113,7 +132,7 @@ export default function GroupsPage() {
               </p>
             </div>
           ) : (
-            filtered.map((group) => (
+            filtered.map((group: Group) => (
               <button
                 key={group.id}
                 onClick={() => setSelectedGroup(group)}
@@ -174,6 +193,23 @@ export default function GroupsPage() {
                   {t("groups.participantCount", { count: selectedGroup.participant_count })}
                 </p>
               </div>
+              <button
+                onClick={() => {
+                  setEditForm({ subject: selectedGroup.subject, description: selectedGroup.description });
+                  setShowEditModal(true);
+                }}
+                className="p-2 rounded-lg hover:bg-accent text-muted-foreground transition-colors"
+                title={t("common.edit")}
+              >
+                <Edit className="h-4 w-4" />
+              </button>
+              <button
+                onClick={() => setShowDeleteConfirm(true)}
+                className="p-2 rounded-lg hover:bg-red-500/10 text-muted-foreground hover:text-red-500 transition-colors"
+                title={t("common.delete")}
+              >
+                <Trash2 className="h-4 w-4" />
+              </button>
             </div>
 
             {/* Group content */}
@@ -197,7 +233,7 @@ export default function GroupsPage() {
                   <p className="text-xs text-muted-foreground text-center py-4">{t("groups.noMessages")}</p>
                 ) : (
                   <div className="space-y-2">
-                    {messages.slice(-10).map((msg) => (
+                    {messages.slice(-10).map((msg: any) => (
                       <div key={msg.id} className={cn(
                         "p-2.5 rounded-lg border",
                         msg.from_me ? "bg-primary/5 border-primary/20" : "bg-card border-border"
@@ -225,11 +261,16 @@ export default function GroupsPage() {
 
               {/* Actions */}
               <div className="space-y-2">
-                <button className="w-full flex items-center gap-3 p-3 rounded-xl bg-card border border-border hover:border-primary/30 transition-colors text-left">
-                  <Link2 className="h-4 w-4 text-primary" />
+                <button
+                  onClick={handleCopyInviteLink}
+                  className="w-full flex items-center gap-3 p-3 rounded-xl bg-card border border-border hover:border-primary/30 transition-colors text-left"
+                >
+                  {copied ? <Check className="h-4 w-4 text-primary" /> : <Link2 className="h-4 w-4 text-primary" />}
                   <div>
                     <p className="text-sm font-medium">{t("groups.inviteLink")}</p>
-                    <p className="text-xs text-muted-foreground">{t("groups.copyLinkDescription")}</p>
+                    <p className="text-xs text-muted-foreground">
+                      {copied ? t("groups.linkCopied", "Link copiado!") : t("groups.copyLinkDescription")}
+                    </p>
                   </div>
                 </button>
                 <button className="w-full flex items-center gap-3 p-3 rounded-xl bg-card border border-border hover:border-primary/30 transition-colors text-left">
@@ -244,6 +285,81 @@ export default function GroupsPage() {
           </>
         )}
       </div>
+
+      {/* Edit Modal */}
+      {showEditModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
+          <div className="bg-card border border-border rounded-2xl shadow-xl w-full max-w-md">
+            <div className="flex items-center justify-between p-4 border-b border-border">
+              <h3 className="text-sm font-semibold">{t("groups.editGroup", "Editar grupo")}</h3>
+              <button onClick={() => setShowEditModal(false)} className="p-1 rounded-lg hover:bg-accent">
+                <X className="h-4 w-4" />
+              </button>
+            </div>
+            <div className="p-4 space-y-3">
+              <div>
+                <label className="text-xs font-medium text-muted-foreground mb-1 block">{t("groups.name", "Nome")}</label>
+                <input
+                  type="text"
+                  value={editForm.subject}
+                  onChange={(e) => setEditForm({ ...editForm, subject: e.target.value })}
+                  className="w-full px-3 py-2 text-sm rounded-xl border border-border bg-background focus:outline-none focus:ring-2 focus:ring-ring/30 transition-colors"
+                />
+              </div>
+              <div>
+                <label className="text-xs font-medium text-muted-foreground mb-1 block">{t("groups.descriptionLabel", "Descrição")}</label>
+                <textarea
+                  value={editForm.description}
+                  onChange={(e) => setEditForm({ ...editForm, description: e.target.value })}
+                  rows={3}
+                  className="w-full px-3 py-2 text-sm rounded-xl border border-border bg-background placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring/30 resize-none transition-colors"
+                />
+              </div>
+            </div>
+            <div className="flex items-center justify-end gap-2 p-4 border-t border-border">
+              <button
+                onClick={() => setShowEditModal(false)}
+                className="px-4 py-2 text-sm rounded-xl bg-muted text-muted-foreground hover:bg-accent transition-colors"
+              >
+                {t("common.cancel")}
+              </button>
+              <button
+                onClick={() => updateMutation.mutate({ groupJid: selectedGroup!.group_jid, data: editForm })}
+                disabled={!editForm.subject || updateMutation.isPending}
+                className="px-4 py-2 text-sm rounded-xl bg-primary text-primary-foreground hover:opacity-90 disabled:opacity-50 transition-colors"
+              >
+                {updateMutation.isPending ? t("common.loading") : t("common.save")}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Delete Confirm */}
+      {showDeleteConfirm && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
+          <div className="bg-card border border-border rounded-2xl shadow-xl w-full max-w-sm">
+            <div className="p-4">
+              <h3 className="text-sm font-semibold mb-2">{t("groups.confirmDelete", "Excluir grupo?")}</h3>
+              <p className="text-xs text-muted-foreground">{t("groups.confirmDeleteDesc", "Esta ação não pode ser desfeita.")}</p>
+            </div>
+            <div className="flex items-center justify-end gap-2 p-4 border-t border-border">
+              <button
+                onClick={() => setShowDeleteConfirm(false)}
+                className="px-4 py-2 text-sm rounded-xl bg-muted text-muted-foreground hover:bg-accent transition-colors"
+              >
+                {t("common.cancel")}
+              </button>
+              <button
+                onClick={() => deleteMutation.mutate(selectedGroup!.group_jid)}
+                className="px-4 py-2 text-sm rounded-xl bg-red-500 text-white hover:bg-red-600 transition-colors"
+              >
+                {t("common.delete")}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

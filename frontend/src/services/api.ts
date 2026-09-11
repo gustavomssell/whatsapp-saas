@@ -135,6 +135,63 @@ export const api = {
   getMembers: () =>
     apiClient.get<{ data: any[] }>("/members").then((r) => r.data),
 
+  getOrgMembers: () =>
+    apiClient.get<any[]>("/org-members").then((r) => r.data),
+
+  updateMemberRole: (memberId: string, role: string) =>
+    apiClient.put<any>(`/org-members/${memberId}/role`, { role }).then((r) => r.data),
+
+  removeMember: (memberId: string) =>
+    apiClient.delete<any>(`/org-members/${memberId}`).then((r) => r.data),
+
+  updateProfile: (data: { name: string; email: string; phone: string; avatar: string }) =>
+    apiClient.put<any>("/profile", data).then((r) => r.data),
+
+  changePassword: (currentPassword: string, newPassword: string) =>
+    apiClient.post<any>("/profile/change-password", { current_password: currentPassword, new_password: newPassword }).then((r) => r.data),
+
+  updateGroup: (groupJid: string, data: { subject: string; description: string }) =>
+    apiClient.put<any>(`/whatsapp/groups/${groupJid}`, data).then((r) => r.data),
+
+  deleteGroup: (groupJid: string) =>
+    apiClient.delete<any>(`/whatsapp/groups/${groupJid}`).then((r) => r.data),
+
+  getGroupInviteLink: (groupJid: string) =>
+    apiClient.get<any>(`/whatsapp/groups/${groupJid}/invite-link`).then((r) => r.data),
+
+  getAuditLogs: (params?: { page?: number; per_page?: number }) =>
+    apiClient.get<{ data: any[]; total: number }>("/audit-logs", { params }).then((r) => r.data),
+
+  getAutoReplyRules: () =>
+    apiClient.get<any[]>("/auto-reply-rules").then((r) => r.data),
+
+  createAutoReplyRule: (data: { name: string; trigger_type: string; trigger_value: string; response_text: string; is_active: boolean }) =>
+    apiClient.post<any>("/auto-reply-rules", data).then((r) => r.data),
+
+  updateAutoReplyRule: (ruleId: string, data: { name: string; trigger_type: string; trigger_value: string; response_text: string; is_active: boolean }) =>
+    apiClient.put<any>(`/auto-reply-rules/${ruleId}`, data).then((r) => r.data),
+
+  deleteAutoReplyRule: (ruleId: string) =>
+    apiClient.delete<any>(`/auto-reply-rules/${ruleId}`).then((r) => r.data),
+
+  getWelcomeMessage: () =>
+    apiClient.get<any>("/welcome-message").then((r) => r.data),
+
+  updateWelcomeMessage: (data: { message: string; is_active: boolean }) =>
+    apiClient.put<any>("/welcome-message", data).then((r) => r.data),
+
+  getDashboardGuideStats: () =>
+    apiClient.get<any[]>("/dashboard/guide-stats").then((r) => r.data),
+
+  getDashboardTopContacts: (limit?: number) =>
+    apiClient.get<any[]>("/dashboard/top-contacts", { params: limit ? { limit } : undefined }).then((r) => r.data),
+
+  getDashboardResponseTime: () =>
+    apiClient.get<any>("/dashboard/response-time").then((r) => r.data),
+
+  exportReport: (period: string) =>
+    apiClient.get("/dashboard/export", { params: { period }, responseType: "blob" } as any).then((r) => r.data),
+
   getPlans: () =>
     apiClient.get<any[]>("/billing/plans").then((r) => r.data),
 

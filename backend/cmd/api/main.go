@@ -94,8 +94,11 @@ func main() {
 				r.Post("/quick-replies", h.CreateQuickReply)
 				r.Delete("/quick-replies/{qrId}", h.DeleteQuickReply)
 
-				r.Get("/groups", h.ListGroups)
-				r.Get("/groups/{groupJid}/messages", h.ListGroupMessages)
+			r.Get("/groups", h.ListGroups)
+			r.Put("/groups/{groupJid}", h.UpdateGroup)
+			r.Delete("/groups/{groupJid}", h.DeleteGroup)
+			r.Get("/groups/{groupJid}/invite-link", h.GetGroupInviteLink)
+			r.Get("/groups/{groupJid}/messages", h.ListGroupMessages)
 
 				r.Get("/conversations/{convJid}/notes", h.ListNotes)
 				r.Post("/conversations/{convJid}/notes", h.CreateNote)
@@ -118,7 +121,27 @@ func main() {
 
 			r.Get("/dashboard/stats", h.DashboardStats)
 			r.Get("/dashboard/chart", h.DashboardChart)
+			r.Get("/dashboard/guide-stats", h.DashboardGuideStats)
+			r.Get("/dashboard/top-contacts", h.DashboardTopContacts)
+			r.Get("/dashboard/response-time", h.DashboardResponseTime)
+			r.Get("/dashboard/export", h.ExportReport)
 			r.Get("/members", h.ListMembers)
+			r.Get("/org-members", h.ListOrgMembers)
+			r.Put("/org-members/{memberId}/role", h.UpdateMemberRole)
+			r.Delete("/org-members/{memberId}", h.RemoveMember)
+
+			r.Put("/profile", h.UpdateProfile)
+			r.Post("/profile/change-password", h.ChangePassword)
+
+			r.Get("/audit-logs", h.ListAuditLogs)
+
+			r.Get("/auto-reply-rules", h.ListAutoReplyRules)
+			r.Post("/auto-reply-rules", h.CreateAutoReplyRule)
+			r.Put("/auto-reply-rules/{ruleId}", h.UpdateAutoReplyRule)
+			r.Delete("/auto-reply-rules/{ruleId}", h.DeleteAutoReplyRule)
+
+			r.Get("/welcome-message", h.GetWelcomeMessage)
+			r.Put("/welcome-message", h.UpdateWelcomeMessage)
 
 			r.Route("/billing", func(r chi.Router) {
 				r.Get("/plans", h.ListPlans)

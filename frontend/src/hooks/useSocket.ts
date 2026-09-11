@@ -11,6 +11,8 @@ export function useSocket(onMessage?: (msg: WSMessage) => void) {
   const token = useAuthStore((s) => s.token);
   const wsRef = useRef<WebSocket | null>(null);
   const reconnectTimeout = useRef<ReturnType<typeof setTimeout>>();
+  const pingInterval = useRef<ReturnType<typeof setInterval>>();
+  const reconnectAttempts = useRef(0);
   const onMessageRef = useRef(onMessage);
   const [connected, setConnected] = useState(false);
 
@@ -29,11 +31,21 @@ export function useSocket(onMessage?: (msg: WSMessage) => void) {
 
     ws.onopen = () => {
       setConnected(true);
+      reconnectAttempts.current = 0;
+
+      // Start ping/pong
+      if (pingInterval.current) clearInterval(pingInterval.current);
+      pingInterval.current = setInterval(() => {
+        if (ws.readyState === WebSocket.OPEN) {
+          ws.send(JSON.stringify({ type: "ping" }));
+        }
+      }, 30000);
     };
 
     ws.onmessage = (event) => {
       try {
         const data: WSMessage = JSON.parse(event.data);
+        if (data.type === "pong") return;
         onMessageRef.current?.(data);
       } catch (e) {
         // ignore
@@ -42,7 +54,12 @@ export function useSocket(onMessage?: (msg: WSMessage) => void) {
 
     ws.onclose = () => {
       setConnected(false);
-      reconnectTimeout.current = setTimeout(connect, 3000);
+      if (pingInterval.current) clearInterval(pingInterval.current);
+
+      // Exponential backoff reconnect
+      const delay = Math.min(1000 * Math.pow(2, reconnectAttempts.current), 30000);
+      reconnectAttempts.current++;
+      reconnectTimeout.current = setTimeout(connect, delay);
     };
 
     ws.onerror = () => {
@@ -54,6 +71,7 @@ export function useSocket(onMessage?: (msg: WSMessage) => void) {
     connect();
     return () => {
       clearTimeout(reconnectTimeout.current);
+      if (pingInterval.current) clearInterval(pingInterval.current);
       wsRef.current?.close();
     };
   }, [connect]);

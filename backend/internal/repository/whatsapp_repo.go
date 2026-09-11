@@ -299,6 +299,36 @@ func (r *WhatsappRepo) DashboardStats(ctx context.Context, orgID string) (*model
 	return stats, nil
 }
 
+func (r *WhatsappRepo) DashboardChartData(ctx context.Context, orgID string, days int) ([]map[string]interface{}, error) {
+	rows, err := r.db.Query(ctx,
+		`SELECT DATE(timestamp) as d,
+		        COUNT(*) FILTER (WHERE from_me = TRUE) as sent,
+		        COUNT(*) FILTER (WHERE from_me = FALSE) as received
+		 FROM whatsapp_messages
+		 WHERE org_id = $1 AND timestamp >= NOW() - INTERVAL '1 day' * $2
+		 GROUP BY d ORDER BY d`, orgID, days,
+	)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	var chart []map[string]interface{}
+	for rows.Next() {
+		var d string
+		var sent, received int
+		if err := rows.Scan(&d, &sent, &received); err != nil {
+			return nil, err
+		}
+		chart = append(chart, map[string]interface{}{
+			"date":     d,
+			"sent":     sent,
+			"received": received,
+		})
+	}
+	return chart, nil
+}
+
 func (r *WhatsappRepo) BulkArchive(ctx context.Context, orgID string, ids []string) error {
 	_, err := r.db.Exec(ctx,
 		`UPDATE whatsapp_conversations SET is_archived = TRUE, updated_at = NOW() WHERE id = ANY($1) AND org_id = $2`,
@@ -609,6 +639,290 @@ func (r *WhatsappRepo) ListGroupMessages(ctx context.Context, groupID string, li
 		msgs = append(msgs, m)
 	}
 	return msgs, nil
+}
+
+func (r *WhatsappRepo) UpdateGroup(ctx context.Context, orgID, groupJid, subject, description string) error {
+	_, err := r.db.Exec(ctx,
+		`UPDATE whatsapp_groups SET subject=$3, description=$4, updated_at=NOW() WHERE org_id=$1 AND group_jid=$2`,
+		orgID, groupJid, subject, description,
+	)
+	return err
+}
+
+func (r *WhatsappRepo) DeleteGroup(ctx context.Context, orgID, groupJid string) error {
+	_, err := r.db.Exec(ctx, `DELETE FROM whatsapp_groups WHERE org_id=$1 AND group_jid=$2`, orgID, groupJid)
+	return err
+}
+
+// Audit Logs
+func (r *WhatsappRepo) CreateAuditLog(ctx context.Context, log *models.AuditLog) error {
+	return r.db.QueryRow(ctx,
+		`INSERT INTO audit_logs (org_id, user_id, user_name, action, entity_type, entity_id, details, ip_address)
+		 VALUES ($1, $2, $3, $4, $5, $6, $7, $8) RETURNING id, created_at`,
+		log.OrgID, log.UserID, log.UserName, log.Action, log.EntityType, log.EntityID, log.Details, log.IPAddress,
+	).Scan(&log.ID, &log.CreatedAt)
+}
+
+func (r *WhatsappRepo) ListAuditLogs(ctx context.Context, orgID string, limit, offset int) ([]models.AuditLog, int, error) {
+	var total int
+	r.db.QueryRow(ctx, `SELECT COUNT(*) FROM audit_logs WHERE org_id=$1`, orgID).Scan(&total)
+
+	rows, err := r.db.Query(ctx,
+		`SELECT id, org_id, user_id, user_name, action, entity_type, entity_id, details, ip_address, created_at
+		 FROM audit_logs WHERE org_id=$1 ORDER BY created_at DESC LIMIT $2 OFFSET $3`,
+		orgID, limit, offset,
+	)
+	if err != nil {
+		return nil, 0, err
+	}
+	defer rows.Close()
+
+	var logs []models.AuditLog
+	for rows.Next() {
+		var l models.AuditLog
+		if err := rows.Scan(&l.ID, &l.OrgID, &l.UserID, &l.UserName, &l.Action, &l.EntityType,
+			&l.EntityID, &l.Details, &l.IPAddress, &l.CreatedAt); err != nil {
+			return nil, 0, err
+		}
+		logs = append(logs, l)
+	}
+	return logs, total, nil
+}
+
+// Auto-Reply Rules
+func (r *WhatsappRepo) ListAutoReplyRules(ctx context.Context, orgID string) ([]models.AutoReplyRule, error) {
+	rows, err := r.db.Query(ctx,
+		`SELECT id, org_id, name, trigger_type, trigger_value, response_text, is_active, created_at, updated_at
+		 FROM auto_reply_rules WHERE org_id=$1 ORDER BY name`, orgID,
+	)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	var rules []models.AutoReplyRule
+	for rows.Next() {
+		var rule models.AutoReplyRule
+		if err := rows.Scan(&rule.ID, &rule.OrgID, &rule.Name, &rule.TriggerType, &rule.TriggerValue,
+			&rule.ResponseText, &rule.IsActive, &rule.CreatedAt, &rule.UpdatedAt); err != nil {
+			return nil, err
+		}
+		rules = append(rules, rule)
+	}
+	return rules, nil
+}
+
+func (r *WhatsappRepo) CreateAutoReplyRule(ctx context.Context, rule *models.AutoReplyRule) error {
+	return r.db.QueryRow(ctx,
+		`INSERT INTO auto_reply_rules (org_id, name, trigger_type, trigger_value, response_text, is_active)
+		 VALUES ($1, $2, $3, $4, $5, $6) RETURNING id, created_at, updated_at`,
+		rule.OrgID, rule.Name, rule.TriggerType, rule.TriggerValue, rule.ResponseText, rule.IsActive,
+	).Scan(&rule.ID, &rule.CreatedAt, &rule.UpdatedAt)
+}
+
+func (r *WhatsappRepo) UpdateAutoReplyRule(ctx context.Context, rule *models.AutoReplyRule) error {
+	_, err := r.db.Exec(ctx,
+		`UPDATE auto_reply_rules SET name=$3, trigger_type=$4, trigger_value=$5, response_text=$6, is_active=$7, updated_at=NOW()
+		 WHERE org_id=$1 AND id=$2`,
+		rule.OrgID, rule.ID, rule.Name, rule.TriggerType, rule.TriggerValue, rule.ResponseText, rule.IsActive,
+	)
+	return err
+}
+
+func (r *WhatsappRepo) DeleteAutoReplyRule(ctx context.Context, orgID, ruleID string) error {
+	_, err := r.db.Exec(ctx, `DELETE FROM auto_reply_rules WHERE org_id=$1 AND id=$2`, orgID, ruleID)
+	return err
+}
+
+func (r *WhatsappRepo) GetActiveAutoReplyRules(ctx context.Context, orgID string) ([]models.AutoReplyRule, error) {
+	rows, err := r.db.Query(ctx,
+		`SELECT id, org_id, name, trigger_type, trigger_value, response_text, is_active, created_at, updated_at
+		 FROM auto_reply_rules WHERE org_id=$1 AND is_active=TRUE`, orgID,
+	)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	var rules []models.AutoReplyRule
+	for rows.Next() {
+		var rule models.AutoReplyRule
+		if err := rows.Scan(&rule.ID, &rule.OrgID, &rule.Name, &rule.TriggerType, &rule.TriggerValue,
+			&rule.ResponseText, &rule.IsActive, &rule.CreatedAt, &rule.UpdatedAt); err != nil {
+			return nil, err
+		}
+		rules = append(rules, rule)
+	}
+	return rules, nil
+}
+
+// Welcome Message
+func (r *WhatsappRepo) GetWelcomeMessage(ctx context.Context, orgID string) (*models.WelcomeMessage, error) {
+	wm := &models.WelcomeMessage{}
+	err := r.db.QueryRow(ctx,
+		`SELECT id, org_id, message, is_active, created_at, updated_at
+		 FROM welcome_messages WHERE org_id=$1`, orgID,
+	).Scan(&wm.ID, &wm.OrgID, &wm.Message, &wm.IsActive, &wm.CreatedAt, &wm.UpdatedAt)
+	if err != nil {
+		return nil, err
+	}
+	return wm, nil
+}
+
+func (r *WhatsappRepo) UpsertWelcomeMessage(ctx context.Context, wm *models.WelcomeMessage) error {
+	return r.db.QueryRow(ctx,
+		`INSERT INTO welcome_messages (org_id, message, is_active)
+		 VALUES ($1, $2, $3)
+		 ON CONFLICT (org_id) DO UPDATE SET message=$2, is_active=$3, updated_at=NOW()
+		 RETURNING id, created_at, updated_at`,
+		wm.OrgID, wm.Message, wm.IsActive,
+	).Scan(&wm.ID, &wm.CreatedAt, &wm.UpdatedAt)
+}
+
+// Dashboard enhanced
+func (r *WhatsappRepo) DashboardGuideStats(ctx context.Context, orgID string) ([]map[string]interface{}, error) {
+	rows, err := r.db.Query(ctx,
+		`SELECT assigned_guide, COUNT(*) as conv_count,
+		 SUM(CASE WHEN unread_count > 0 THEN 1 ELSE 0 END) as unread_count
+		 FROM whatsapp_conversations WHERE org_id=$1 AND assigned_guide != '' AND is_archived=FALSE
+		 GROUP BY assigned_guide ORDER BY conv_count DESC`, orgID,
+	)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	var stats []map[string]interface{}
+	for rows.Next() {
+		var guide string
+		var convCount, unreadCount int
+		if err := rows.Scan(&guide, &convCount, &unreadCount); err != nil {
+			return nil, err
+		}
+		stats = append(stats, map[string]interface{}{
+			"guide":        guide,
+			"conv_count":   convCount,
+			"unread_count": unreadCount,
+		})
+	}
+	return stats, nil
+}
+
+func (r *WhatsappRepo) DashboardTopContacts(ctx context.Context, orgID string, limit int) ([]map[string]interface{}, error) {
+	rows, err := r.db.Query(ctx,
+		`SELECT name, phone, COUNT(m.id) as msg_count
+		 FROM whatsapp_conversations c
+		 JOIN whatsapp_messages m ON m.conversation_id = c.id
+		 WHERE c.org_id=$1 AND c.is_group=FALSE AND c.is_archived=FALSE
+		 GROUP BY c.name, c.phone
+		 ORDER BY msg_count DESC LIMIT $2`, orgID, limit,
+	)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	var contacts []map[string]interface{}
+	for rows.Next() {
+		var name, phone string
+		var msgCount int
+		if err := rows.Scan(&name, &phone, &msgCount); err != nil {
+			return nil, err
+		}
+		contacts = append(contacts, map[string]interface{}{
+			"name":      name,
+			"phone":     phone,
+			"msg_count": msgCount,
+		})
+	}
+	return contacts, nil
+}
+
+func (r *WhatsappRepo) DashboardResponseTime(ctx context.Context, orgID string) (float64, error) {
+	var avgSeconds float64
+	err := r.db.QueryRow(ctx,
+		`SELECT COALESCE(AVG(EXTRACT(EPOCH FROM (m2.timestamp - m1.timestamp))), 0)
+		 FROM whatsapp_messages m1
+		 JOIN whatsapp_messages m2 ON m2.conversation_id = m1.conversation_id
+		   AND m2.timestamp > m1.timestamp
+		   AND m2.from_me = TRUE AND m1.from_me = FALSE
+		 WHERE m1.org_id=$1 AND m1.is_group=FALSE
+		   AND m1.timestamp > NOW() - INTERVAL '7 days'`, orgID,
+	).Scan(&avgSeconds)
+	return avgSeconds, err
+}
+
+// User profile
+func (r *WhatsappRepo) UpdateUserProfile(ctx context.Context, userID, name, email, phone, avatar string) error {
+	_, err := r.db.Exec(ctx,
+		`UPDATE users SET name=$2, email=$3, phone=$4, avatar=$5, updated_at=NOW() WHERE id=$1`,
+		userID, name, email, phone, avatar,
+	)
+	return err
+}
+
+func (r *WhatsappRepo) UpdateUserPassword(ctx context.Context, userID, passwordHash string) error {
+	_, err := r.db.Exec(ctx,
+		`UPDATE users SET password_hash=$2, updated_at=NOW() WHERE id=$1`,
+		userID, passwordHash,
+	)
+	return err
+}
+
+func (r *WhatsappRepo) GetUserByID(ctx context.Context, userID string) (*models.User, error) {
+	u := &models.User{}
+	err := r.db.QueryRow(ctx,
+		`SELECT id, org_id, name, email, password_hash, role, avatar, phone, created_at, updated_at
+		 FROM users WHERE id=$1`, userID,
+	).Scan(&u.ID, &u.OrgID, &u.Name, &u.Email, &u.PasswordHash, &u.Role, &u.Avatar, &u.Phone, &u.CreatedAt, &u.UpdatedAt)
+	if err != nil {
+		return nil, err
+	}
+	return u, nil
+}
+
+func (r *WhatsappRepo) ListOrgMembers(ctx context.Context, orgID string) ([]models.User, error) {
+	rows, err := r.db.Query(ctx,
+		`SELECT id, org_id, name, email, role, avatar, phone, created_at, updated_at
+		 FROM users WHERE org_id=$1 ORDER BY name`, orgID,
+	)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	var users []models.User
+	for rows.Next() {
+		var u models.User
+		if err := rows.Scan(&u.ID, &u.OrgID, &u.Name, &u.Email, &u.Role, &u.Avatar, &u.Phone, &u.CreatedAt, &u.UpdatedAt); err != nil {
+			return nil, err
+		}
+		users = append(users, u)
+	}
+	return users, nil
+}
+
+func (r *WhatsappRepo) UpdateMemberRole(ctx context.Context, orgID, userID, role string) error {
+	_, err := r.db.Exec(ctx,
+		`UPDATE users SET role=$3, updated_at=NOW() WHERE id=$1 AND org_id=$2`,
+		userID, orgID, role,
+	)
+	return err
+}
+
+func (r *WhatsappRepo) RemoveMember(ctx context.Context, orgID, userID string) error {
+	_, err := r.db.Exec(ctx,
+		`DELETE FROM organization_members WHERE org_id=$1 AND user_id=$2`,
+		orgID, userID,
+	)
+	if err != nil {
+		return err
+	}
+	_, err = r.db.Exec(ctx,
+		`UPDATE users SET org_id=NULL, updated_at=NOW() WHERE id=$1 AND org_id=$2`,
+		userID, orgID,
+	)
+	return err
 }
 
 

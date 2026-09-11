@@ -252,6 +252,40 @@ type WhatsappContact struct {
 	UpdatedAt   time.Time `json:"updated_at" db:"updated_at"`
 }
 
+type AuditLog struct {
+	ID         string          `json:"id" db:"id"`
+	OrgID      string          `json:"org_id" db:"org_id"`
+	UserID     string          `json:"user_id" db:"user_id"`
+	UserName   string          `json:"user_name" db:"user_name"`
+	Action     string          `json:"action" db:"action"`
+	EntityType string          `json:"entity_type" db:"entity_type"`
+	EntityID   string          `json:"entity_id" db:"entity_id"`
+	Details    json.RawMessage `json:"details" db:"details"`
+	IPAddress  string          `json:"ip_address" db:"ip_address"`
+	CreatedAt  time.Time       `json:"created_at" db:"created_at"`
+}
+
+type AutoReplyRule struct {
+	ID          string    `json:"id" db:"id"`
+	OrgID       string    `json:"org_id" db:"org_id"`
+	Name        string    `json:"name" db:"name"`
+	TriggerType string    `json:"trigger_type" db:"trigger_type"`
+	TriggerValue string   `json:"trigger_value" db:"trigger_value"`
+	ResponseText string   `json:"response_text" db:"response_text"`
+	IsActive    bool      `json:"is_active" db:"is_active"`
+	CreatedAt   time.Time `json:"created_at" db:"created_at"`
+	UpdatedAt   time.Time `json:"updated_at" db:"updated_at"`
+}
+
+type WelcomeMessage struct {
+	ID        string    `json:"id" db:"id"`
+	OrgID     string    `json:"org_id" db:"org_id"`
+	Message   string    `json:"message" db:"message"`
+	IsActive  bool      `json:"is_active" db:"is_active"`
+	CreatedAt time.Time `json:"created_at" db:"created_at"`
+	UpdatedAt time.Time `json:"updated_at" db:"updated_at"`
+}
+
 type APIKey struct {
 	ID          string          `json:"id" db:"id"`
 	OrgID       string          `json:"org_id" db:"org_id"`
