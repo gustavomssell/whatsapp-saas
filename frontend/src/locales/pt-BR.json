@@ -109,7 +109,39 @@
     "noSearchResults": "Nenhum resultado encontrado",
     "searchResults": "resultado(s) encontrado(s)",
     "bulkActions": "Ações em massa",
-    "selected": "selecionado(s)"
+    "selected": "selecionado(s)",
+    "noMatches": "Nenhuma conversa corresponde à busca",
+    "noMessagesYet": "Sem mensagens",
+    "selectConversation": "Selecione uma conversa para começar",
+    "group": "Grupo",
+    "unpinConversation": "Desafixar",
+    "pinConversation": "Fixar",
+    "tagsTitle": "Tags",
+    "assignGuideTitle": "Atribuir guia",
+    "notesTitle": "Notas",
+    "archiveConversation": "Arquivar",
+    "searchInChat": "Buscar na conversa",
+    "searchInChatPlaceholder": "Buscar na conversa...",
+    "react": "Reagir",
+    "replyTo": "Responder",
+    "forwardTo": "Encaminhar",
+    "editMsg": "Editar",
+    "deleteMsg": "Excluir",
+    "respondingTo": "Respondendo",
+    "editingMessage": "Editando mensagem",
+    "quickRepliesTitle": "Respostas rápidas",
+    "typeMessagePlaceholder": "Digite sua mensagem...",
+    "internalNotes": "Notas internas",
+    "noNotesYet": "Nenhuma nota ainda",
+    "addNotePlaceholder": "Adicionar nota...",
+    "you": "Você",
+    "messageLabel": "Mensagem",
+    "location": "Localização",
+    "contact": "Contato",
+    "poll": "Enquete",
+    "file": "Arquivo",
+    "(edited)": "(editada)",
+    "resultsFound": "resultado(s) encontrado(s)"
   },
   "groups": {
     "title": "Grupos",
@@ -201,5 +233,10 @@
     "en": "English",
     "es": "Español",
     "switch": "Idioma"
+  },
+  "theme": {
+    "system": "Sistema",
+    "light": "Claro",
+    "dark": "Escuro"
   }
 }

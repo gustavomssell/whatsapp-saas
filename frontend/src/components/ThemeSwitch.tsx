@@ -1,13 +1,15 @@
+import { useTranslation } from "react-i18next";
 import { useTheme } from "./ThemeProvider";
 import { cn } from "@/lib/utils";
 
 export default function ThemeSwitch({ className }: { className?: string }) {
   const { theme, setTheme } = useTheme();
+  const { t } = useTranslation();
 
   const options = [
-    { value: "system" as const, label: "System", icon: SystemIcon },
-    { value: "light" as const, label: "Light", icon: SunIcon },
-    { value: "dark" as const, label: "Dark", icon: MoonIcon },
+    { value: "system" as const, label: t("theme.system"), icon: SystemIcon },
+    { value: "light" as const, label: t("theme.light"), icon: SunIcon },
+    { value: "dark" as const, label: t("theme.dark"), icon: MoonIcon },
   ];
 
   return (
@@ -17,13 +19,13 @@ export default function ThemeSwitch({ className }: { className?: string }) {
         className
       )}
       role="group"
-      aria-label="Preferência de tema"
+      aria-label={t("theme.system")}
     >
       {options.map((opt) => (
         <button
           key={opt.value}
           onClick={() => setTheme(opt.value)}
-          aria-label={`Mudar para tema ${opt.label}`}
+          aria-label={opt.label}
           className={cn(
             "z-10 flex size-5 items-center justify-center rounded-full transition-colors duration-200",
             theme === opt.value
@@ -35,7 +37,6 @@ export default function ThemeSwitch({ className }: { className?: string }) {
           <opt.icon className="size-3" />
         </button>
       ))}
-      {/* Sliding indicator */}
       <div
         className={cn(
           "absolute top-1 h-5 w-5 rounded-full bg-foreground/10 transition-all duration-200",

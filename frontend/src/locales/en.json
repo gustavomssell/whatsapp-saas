@@ -109,7 +109,39 @@
     "noSearchResults": "No results found",
     "searchResults": "result(s) found",
     "bulkActions": "Bulk actions",
-    "selected": "selected"
+    "selected": "selected",
+    "noMatches": "No conversations match your search",
+    "noMessagesYet": "No messages yet",
+    "selectConversation": "Select a conversation to start",
+    "group": "Group",
+    "unpinConversation": "Unpin",
+    "pinConversation": "Pin",
+    "tagsTitle": "Tags",
+    "assignGuideTitle": "Assign guide",
+    "notesTitle": "Notes",
+    "archiveConversation": "Archive",
+    "searchInChat": "Search in chat",
+    "searchInChatPlaceholder": "Search in conversation...",
+    "react": "React",
+    "replyTo": "Reply",
+    "forwardTo": "Forward",
+    "editMsg": "Edit",
+    "deleteMsg": "Delete",
+    "respondingTo": "Replying to",
+    "editingMessage": "Editing message",
+    "quickRepliesTitle": "Quick replies",
+    "typeMessagePlaceholder": "Type your message...",
+    "internalNotes": "Internal notes",
+    "noNotesYet": "No notes yet",
+    "addNotePlaceholder": "Add note...",
+    "you": "You",
+    "messageLabel": "Message",
+    "location": "Location",
+    "contact": "Contact",
+    "poll": "Poll",
+    "file": "File",
+    "(edited)": "(edited)",
+    "resultsFound": "result(s) found"
   },
   "groups": {
     "title": "Groups",
@@ -201,5 +233,10 @@
     "en": "English",
     "es": "Español",
     "switch": "Language"
+  },
+  "theme": {
+    "system": "System",
+    "light": "Light",
+    "dark": "Dark"
   }
 }

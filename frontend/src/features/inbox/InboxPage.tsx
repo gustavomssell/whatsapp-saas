@@ -23,6 +23,7 @@ import {
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
+import { useTranslation } from "react-i18next";
 
 interface Conversation {
   id: string;
@@ -72,6 +73,7 @@ const EMOJI_LIST = ["😀", "👍", "❤️", "🔥", "😂", "🙏", "👏", "O
 const TAG_COLORS = ["#00FFA7", "#FF6B6B", "#4ECDC4", "#45B7D1", "#96CEB4", "#FFEAA7", "#DDA0DD", "#FF8C00", "#87CEEB", "#98FB98"];
 
 export default function InboxPage() {
+  const { t, i18n } = useTranslation();
   const { jid } = useParams();
   const navigate = useNavigate();
   const [conversations, setConversations] = useState<Conversation[]>([]);
@@ -180,13 +182,13 @@ export default function InboxPage() {
         setMessages((prev) =>
           prev.map((m) =>
             m.remote_msg_id === msg.payload.remote_msg_id
-              ? { ...m, is_deleted: true, content: "Mensagem excluida" }
+              ? { ...m, is_deleted: true, content: t("inbox.deletedMessage") }
               : m
           )
         );
       }
     },
-    [selectedConv]
+    [selectedConv, t]
   );
 
   const { connected } = useSocket(handleWSMessage);
@@ -353,7 +355,7 @@ export default function InboxPage() {
       setMessages((prev) =>
         prev.map((m) =>
           m.remote_msg_id === msgId
-            ? { ...m, is_deleted: true, content: "Mensagem excluida" }
+            ? { ...m, is_deleted: true, content: t("inbox.deletedMessage") }
             : m
         )
       );
@@ -485,7 +487,7 @@ export default function InboxPage() {
 
   const formatTime = (ts: string) => {
     const d = new Date(ts);
-    return d.toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" });
+    return d.toLocaleTimeString(i18n.language || "pt-BR", { hour: "2-digit", minute: "2-digit" });
   };
 
   const formatDate = (ts: string) => {
@@ -495,7 +497,7 @@ export default function InboxPage() {
     if (diff < 86400000 && d.getDate() === now.getDate()) {
       return formatTime(ts);
     }
-    return d.toLocaleDateString("pt-BR", { day: "2-digit", month: "2-digit" });
+    return d.toLocaleDateString(i18n.language || "pt-BR", { day: "2-digit", month: "2-digit" });
   };
 
   const filtered = conversations.filter(
@@ -524,7 +526,7 @@ export default function InboxPage() {
       >
         <div className="px-4 pt-4 pb-3">
           <div className="flex items-center justify-between mb-3">
-            <h2 className="text-base font-semibold">Inbox</h2>
+            <h2 className="text-base font-semibold">{t("inbox.title")}</h2>
             <span
               className={cn(
                 "text-[10px] px-2 py-0.5 rounded-full",
@@ -533,7 +535,7 @@ export default function InboxPage() {
                   : "bg-muted text-muted-foreground"
               )}
             >
-              {connected ? "Online" : "Offline"}
+              {connected ? t("inbox.online") : t("inbox.offline")}
             </span>
           </div>
           <div className="relative">
@@ -542,7 +544,7 @@ export default function InboxPage() {
               type="text"
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              placeholder="Buscar conversa..."
+              placeholder={t("inbox.searchPlaceholder")}
               className="w-full pl-9 pr-3 py-2 text-sm rounded-xl border border-border bg-background placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring/30 focus:border-ring/50 transition-colors"
             />
           </div>
@@ -551,15 +553,15 @@ export default function InboxPage() {
         {/* Bulk actions bar */}
         {showBulkBar && selectedConvIds.size > 0 && (
           <div className="px-4 py-2 border-b border-border bg-primary/5 flex items-center gap-2">
-            <span className="text-xs text-primary font-medium">{selectedConvIds.size} selecionadas</span>
+            <span className="text-xs text-primary font-medium">{selectedConvIds.size} {t("inbox.selected")}</span>
             <button onClick={() => handleBulkAction("archive")} className="text-xs px-2 py-1 rounded bg-muted hover:bg-accent transition-colors">
-              Arquivar
+              {t("inbox.archive")}
             </button>
             <button onClick={() => { setTagInput(""); }} className="text-xs px-2 py-1 rounded bg-muted hover:bg-accent transition-colors">
-              Tag
+              {t("common.tags")}
             </button>
             <button onClick={() => { setSelectedConvIds(new Set()); setShowBulkBar(false); }} className="ml-auto text-xs text-muted-foreground">
-              Cancelar
+              {t("common.cancel")}
             </button>
           </div>
         )}
@@ -576,8 +578,8 @@ export default function InboxPage() {
               </div>
               <p className="text-sm text-muted-foreground">
                 {conversations.length === 0
-                  ? "Nenhuma conversa encontrada"
-                  : "Nenhuma conversa corresponde a busca"}
+                  ? t("inbox.noConversations")
+                  : t("inbox.noMatches")}
               </p>
             </div>
           ) : (
@@ -631,7 +633,7 @@ export default function InboxPage() {
                   </div>
                   <div className="flex items-center justify-between gap-2 mt-0.5">
                     <p className="text-xs text-muted-foreground truncate">
-                      {conv.last_message || "Sem mensagens"}
+                      {conv.last_message || t("inbox.noMessagesYet")}
                     </p>
                     <div className="flex items-center gap-1.5 flex-shrink-0">
                       {conv.is_pinned && (
@@ -681,7 +683,7 @@ export default function InboxPage() {
                 <Send className="h-7 w-7 text-primary" />
               </div>
               <p className="text-muted-foreground">
-                Selecione uma conversa para comecar
+                {t("inbox.selectConversation")}
               </p>
             </div>
           </div>
@@ -709,14 +711,14 @@ export default function InboxPage() {
                       connected ? "bg-green-500" : "bg-muted-foreground"
                     )}
                   />
-                  {selectedConv.is_group ? "Grupo" : selectedConv.phone}
+                  {selectedConv.is_group ? t("inbox.group") : selectedConv.phone}
                   {selectedConv.assigned_guide && (
                     <span className="text-primary ml-1">
                       | {selectedConv.assigned_guide}
                     </span>
                   )}
                   {typingJid === selectedConv.jid && (
-                    <span className="text-primary animate-pulse ml-1">digitando...</span>
+                    <span className="text-primary animate-pulse ml-1">{t("inbox.typing")}</span>
                   )}
                 </p>
               </div>
@@ -729,7 +731,7 @@ export default function InboxPage() {
                       ? "bg-primary/10 text-primary"
                       : "hover:bg-accent text-muted-foreground"
                   )}
-                  title={selectedConv.is_pinned ? "Desafixar" : "Fixar"}
+                  title={selectedConv.is_pinned ? t("inbox.unpinConversation") : t("inbox.pinConversation")}
                 >
                   <Pin className="h-4 w-4" />
                 </button>
@@ -741,7 +743,7 @@ export default function InboxPage() {
                       ? "bg-primary/10 text-primary"
                       : "hover:bg-accent text-muted-foreground"
                   )}
-                  title="Tags"
+                  title={t("inbox.tagsTitle")}
                 >
                   <Tag className="h-4 w-4" />
                 </button>
@@ -753,7 +755,7 @@ export default function InboxPage() {
                       ? "bg-primary/10 text-primary"
                       : "hover:bg-accent text-muted-foreground"
                   )}
-                  title="Atribuir guia"
+                  title={t("inbox.assignGuideTitle")}
                 >
                   <UserPlus className="h-4 w-4" />
                 </button>
@@ -765,7 +767,7 @@ export default function InboxPage() {
                       ? "bg-primary/10 text-primary"
                       : "hover:bg-accent text-muted-foreground"
                   )}
-                  title="Notas"
+                  title={t("inbox.notesTitle")}
                 >
                   <StickyNote className="h-4 w-4" />
                 </button>
@@ -777,14 +779,14 @@ export default function InboxPage() {
                     navigate("/inbox");
                   }}
                   className="p-2 rounded-lg hover:bg-accent text-muted-foreground"
-                  title="Arquivar"
+                  title={t("inbox.archiveConversation")}
                 >
                   <Archive className="h-4 w-4" />
                 </button>
                 <button
                   onClick={() => setShowChatSearch(!showChatSearch)}
                   className="p-2 rounded-lg hover:bg-accent text-muted-foreground"
-                  title="Buscar na conversa"
+                  title={t("inbox.searchInChat")}
                 >
                   <Search className="h-4 w-4" />
                 </button>
@@ -796,7 +798,7 @@ export default function InboxPage() {
                 <div className="flex gap-2">
                   <input
                     type="text"
-                    placeholder="Buscar na conversa..."
+                    placeholder={t("inbox.searchInChatPlaceholder")}
                     value={chatSearch}
                     onChange={(e) => handleChatSearch(e.target.value)}
                     autoFocus
@@ -811,7 +813,7 @@ export default function InboxPage() {
                 </div>
                 {chatSearchResults.length > 0 && (
                   <div className="mt-2 text-xs text-muted-foreground">
-                    {chatSearchResults.length} resultado(s) encontrado(s)
+                    {chatSearchResults.length} {t("inbox.resultsFound")}
                   </div>
                 )}
               </div>
@@ -832,7 +834,7 @@ export default function InboxPage() {
                   )}
                   {messages.length === 0 && !loadingMore && (
                     <div className="flex items-center justify-center h-full">
-                      <p className="text-sm text-muted-foreground">Nenhuma mensagem ainda</p>
+                      <p className="text-sm text-muted-foreground">{t("inbox.noMessages")}</p>
                     </div>
                   )}
                   {messages.map((msg) => {
@@ -866,7 +868,7 @@ export default function InboxPage() {
                           {quotedMsg && (
                             <div className="mb-2 p-2 rounded-lg bg-background/50 border-l-2 border-primary/40">
                               <p className="text-[10px] text-primary font-medium">
-                                {quotedMsg.from_me ? "Voce" : quotedMsg.sender_name || "Mensagem"}
+                                {quotedMsg.from_me ? t("inbox.you") : quotedMsg.sender_name || t("inbox.messageLabel")}
                               </p>
                               <p className="text-xs text-muted-foreground truncate">
                                 {quotedMsg.content}
@@ -881,7 +883,7 @@ export default function InboxPage() {
                                   <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z" />
                                   <circle cx="12" cy="10" r="3" />
                                 </svg>
-                                Localização
+                                {t("inbox.location")}
                               </div>
                               <p className="text-xs text-muted-foreground mt-1">{msg.content}</p>
                             </div>
@@ -894,7 +896,7 @@ export default function InboxPage() {
                                   <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2" />
                                   <circle cx="12" cy="7" r="4" />
                                 </svg>
-                                Contato
+                                {t("inbox.contact")}
                               </div>
                               <p className="text-xs text-muted-foreground mt-1">{msg.content}</p>
                             </div>
@@ -909,7 +911,7 @@ export default function InboxPage() {
                                   <path d="M22 21v-2a4 4 0 0 0-3-3.87" />
                                   <path d="M16 3.13a4 4 0 0 1 0 7.75" />
                                 </svg>
-                                Enquete
+                                {t("inbox.poll")}
                               </div>
                               <p className="text-xs text-muted-foreground mt-1">{msg.content}</p>
                             </div>
@@ -938,20 +940,20 @@ export default function InboxPage() {
                                   rel="noopener"
                                   className="text-primary hover:opacity-80 underline text-sm"
                                 >
-                                  Arquivo
+                                  {t("inbox.file")}
                                 </a>
                               )}
                             </div>
                           )}
 
                           <p className="text-sm whitespace-pre-wrap break-words leading-relaxed">
-                            {msg.is_deleted ? "Mensagem excluida" : msg.content}
+                            {msg.is_deleted ? t("inbox.deletedMessage") : msg.content}
                           </p>
 
                           <div className="flex items-center justify-between gap-2 mt-1.5">
                             <p className="text-[10px] text-muted-foreground">
                               {formatTime(msg.timestamp)}
-                              {msg.is_edited && !msg.is_deleted && " (editada)"}
+                              {msg.is_edited && !msg.is_deleted && ` ${t("inbox.(edited)")}`}
                             </p>
                             {msg.from_me && !msg.is_deleted && (
                               <span className="text-[10px] text-muted-foreground">
@@ -978,7 +980,7 @@ export default function InboxPage() {
                               <button
                                 onClick={() => setShowEmojiPicker(msg.remote_msg_id)}
                                 className="p-1 rounded hover:bg-accent text-muted-foreground"
-                                title="Reagir"
+                                title={t("inbox.react")}
                               >
                                 <Smile className="h-3.5 w-3.5" />
                               </button>
@@ -988,7 +990,7 @@ export default function InboxPage() {
                                   setText("");
                                 }}
                                 className="p-1 rounded hover:bg-accent text-muted-foreground"
-                                title="Responder"
+                                title={t("inbox.replyTo")}
                               >
                                 <svg className="h-3.5 w-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
                                   <path d="M3 10h10a8 8 0 0 1 8 8v2M3 10l6 6m-6-6l6-6" />
@@ -998,7 +1000,7 @@ export default function InboxPage() {
                                 <button
                                   onClick={() => setShowForwardModal(msg.remote_msg_id)}
                                   className="p-1 rounded hover:bg-accent text-muted-foreground"
-                                  title="Encaminhar"
+                                  title={t("inbox.forwardTo")}
                                 >
                                   <svg className="h-3.5 w-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
                                     <path d="M22 2L11 13M22 2l-7 20-4-9-9-4 20-7z" />
@@ -1013,7 +1015,7 @@ export default function InboxPage() {
                                       setText(msg.content);
                                     }}
                                     className="p-1 rounded hover:bg-accent text-muted-foreground"
-                                    title="Editar"
+                                    title={t("inbox.editMsg")}
                                   >
                                     <svg className="h-3.5 w-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
                                       <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7" />
@@ -1023,7 +1025,7 @@ export default function InboxPage() {
                                   <button
                                     onClick={() => setShowDeleteModal(msg.remote_msg_id)}
                                     className="p-1 rounded hover:bg-destructive/10 text-destructive"
-                                    title="Excluir"
+                                    title={t("inbox.deleteMsg")}
                                   >
                                     <Trash2 className="h-3.5 w-3.5" />
                                   </button>
@@ -1059,7 +1061,7 @@ export default function InboxPage() {
                     <div className="mb-2 p-2 rounded-lg bg-background border border-border flex items-center gap-2">
                       <div className="w-0.5 h-8 bg-primary rounded-full flex-shrink-0" />
                       <div className="flex-1 min-w-0">
-                        <p className="text-[10px] text-primary font-medium">Respondendo</p>
+                        <p className="text-[10px] text-primary font-medium">{t("inbox.respondingTo")}</p>
                         <p className="text-xs text-muted-foreground truncate">{quotedMessage.content}</p>
                       </div>
                       <button onClick={() => setQuotedMessage(null)} className="p-1 rounded hover:bg-accent">
@@ -1072,7 +1074,7 @@ export default function InboxPage() {
                     <div className="mb-2 p-2 rounded-lg bg-background border border-primary/30 flex items-center gap-2">
                       <div className="w-0.5 h-8 bg-primary rounded-full flex-shrink-0" />
                       <div className="flex-1 min-w-0">
-                        <p className="text-[10px] text-primary font-medium">Editando mensagem</p>
+                        <p className="text-[10px] text-primary font-medium">{t("inbox.editingMessage")}</p>
                         <p className="text-xs text-muted-foreground truncate">{editingMsg.content}</p>
                       </div>
                       <button onClick={() => { setEditingMsg(null); setText(""); }} className="p-1 rounded hover:bg-accent">
@@ -1098,7 +1100,7 @@ export default function InboxPage() {
                     <div className="flex-1 relative">
                       {text.startsWith("/") && quickReplies && quickReplies.length > 0 && (
                         <div className="absolute bottom-full left-0 right-0 mb-2 p-2 bg-card border border-border rounded-xl shadow-lg max-h-48 overflow-y-auto z-20">
-                          <p className="text-[10px] text-muted-foreground mb-1 px-1">Respostas rapidas</p>
+                          <p className="text-[10px] text-muted-foreground mb-1 px-1">{t("inbox.quickRepliesTitle")}</p>
                           {quickReplies
                             .filter((qr) =>
                               qr.shortcut.toLowerCase().includes(text.toLowerCase()) ||
@@ -1122,7 +1124,7 @@ export default function InboxPage() {
                         value={text}
                         onChange={(e) => setText(e.target.value)}
                         onKeyDown={handleKeyDown}
-                        placeholder="Digite sua mensagem..."
+                        placeholder={t("inbox.typeMessagePlaceholder")}
                         rows={1}
                         className="w-full resize-none px-4 py-2.5 rounded-xl border border-border bg-background text-sm placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring/30 focus:border-ring/50 transition-colors"
                       />
@@ -1160,7 +1162,7 @@ export default function InboxPage() {
               {showNotes && (
                 <div className="w-72 border-l border-border bg-card flex flex-col">
                   <div className="px-4 py-3 border-b border-border flex items-center justify-between">
-                    <h3 className="text-sm font-semibold">Notas internas</h3>
+                    <h3 className="text-sm font-semibold">{t("inbox.internalNotes")}</h3>
                     <button onClick={() => setShowNotes(false)} className="p-1 rounded hover:bg-accent">
                       <X className="h-4 w-4 text-muted-foreground" />
                     </button>
@@ -1172,7 +1174,7 @@ export default function InboxPage() {
                       </div>
                     ) : notes.length === 0 ? (
                       <p className="text-xs text-muted-foreground text-center py-6">
-                        Nenhuma nota ainda
+                        {t("inbox.noNotesYet")}
                       </p>
                     ) : (
                       notes.map((note) => (
@@ -1180,7 +1182,7 @@ export default function InboxPage() {
                           <p className="text-[10px] text-primary font-medium">{note.user_name}</p>
                           <p className="text-xs text-foreground mt-0.5">{note.content}</p>
                           <p className="text-[10px] text-muted-foreground mt-1">
-                            {new Date(note.created_at).toLocaleDateString("pt-BR")}
+                            {new Date(note.created_at).toLocaleDateString(i18n.language || "pt-BR")}
                           </p>
                         </div>
                       ))
@@ -1192,7 +1194,7 @@ export default function InboxPage() {
                         type="text"
                         value={noteText}
                         onChange={(e) => setNoteText(e.target.value)}
-                        placeholder="Adicionar nota..."
+                        placeholder={t("inbox.addNotePlaceholder")}
                         className="flex-1 px-3 py-2 rounded-xl border border-border bg-background text-xs focus:outline-none focus:ring-2 focus:ring-ring/30 focus:border-ring/50 transition-colors"
                         onKeyDown={(e) => {
                           if (e.key === "Enter" && noteText.trim()) {
@@ -1223,10 +1225,10 @@ export default function InboxPage() {
             {showForwardModal && (
               <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm">
                 <div className="bg-card border border-border rounded-2xl shadow-xl w-full max-w-md p-5">
-                  <h3 className="text-base font-semibold mb-3">Encaminhar mensagem</h3>
+                  <h3 className="text-base font-semibold mb-3">{t("inbox.forwardMessage")}</h3>
                   <input
                     type="text"
-                    placeholder="Buscar conversa de destino..."
+                    placeholder={t("inbox.searchConversation")}
                     value={forwardSearch}
                     onChange={(e) => handleSearchForward(e.target.value)}
                     autoFocus
@@ -1250,7 +1252,7 @@ export default function InboxPage() {
                       </button>
                     ))}
                     {forwardSearch.length >= 2 && forwardResults.length === 0 && (
-                      <p className="text-sm text-muted-foreground text-center py-4">Nenhuma conversa encontrada</p>
+                      <p className="text-sm text-muted-foreground text-center py-4">{t("inbox.noConversations")}</p>
                     )}
                   </div>
                   <div className="flex justify-end mt-4">
@@ -1258,7 +1260,7 @@ export default function InboxPage() {
                       onClick={() => { setShowForwardModal(null); setForwardSearch(""); setForwardResults([]); }}
                       className="px-4 py-2 text-sm text-muted-foreground hover:text-foreground"
                     >
-                      Cancelar
+                      {t("common.cancel")}
                     </button>
                   </div>
                 </div>
@@ -1269,29 +1271,29 @@ export default function InboxPage() {
             {showDeleteModal && (
               <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm">
                 <div className="bg-card border border-border rounded-2xl shadow-xl w-full max-w-sm p-5">
-                  <h3 className="text-base font-semibold mb-3">Excluir mensagem</h3>
+                  <h3 className="text-base font-semibold mb-3">{t("inbox.deleteMessage")}</h3>
                   <p className="text-sm text-muted-foreground mb-5">
-                    Tem certeza que deseja excluir esta mensagem?
+                    {t("inbox.deleteConfirm", "Tem certeza que deseja excluir esta mensagem?")}
                   </p>
                   <div className="flex gap-2">
                     <button
                       onClick={() => handleDeleteMessage(showDeleteModal, false)}
                       className="flex-1 py-2.5 rounded-xl border border-border text-sm hover:bg-accent transition-colors"
                     >
-                      Para mim
+                      {t("inbox.deleteForMe")}
                     </button>
                     <button
                       onClick={() => handleDeleteMessage(showDeleteModal, true)}
                       className="flex-1 py-2.5 rounded-xl bg-destructive text-destructive-foreground text-sm hover:opacity-90 transition-opacity"
                     >
-                      Para todos
+                      {t("inbox.deleteForEveryone")}
                     </button>
                   </div>
                   <button
                     onClick={() => setShowDeleteModal(null)}
                     className="w-full mt-2 py-2 text-sm text-muted-foreground hover:text-foreground transition-colors"
                   >
-                    Cancelar
+                    {t("common.cancel")}
                   </button>
                 </div>
               </div>
@@ -1302,7 +1304,7 @@ export default function InboxPage() {
               <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm">
                 <div className="bg-card border border-border rounded-2xl shadow-xl w-full max-w-sm p-5">
                   <div className="flex items-center justify-between mb-4">
-                    <h3 className="text-base font-semibold">Atribuir guia</h3>
+                    <h3 className="text-base font-semibold">{t("inbox.assignGuideTitle")}</h3>
                     <button onClick={() => setShowGuideModal(false)} className="p-1 rounded hover:bg-accent">
                       <X className="h-4 w-4 text-muted-foreground" />
                     </button>
@@ -1312,7 +1314,7 @@ export default function InboxPage() {
                       onClick={() => handleAssignGuide("")}
                       className="w-full text-left p-2.5 rounded-lg hover:bg-accent text-sm text-muted-foreground"
                     >
-                      Remover atribuicao
+                      {t("inbox.removeAssignment", "Remover atribuição")}
                     </button>
                     {members.map((m) => (
                       <button
@@ -1336,7 +1338,7 @@ export default function InboxPage() {
               <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm">
                 <div className="bg-card border border-border rounded-2xl shadow-xl w-full max-w-sm p-5">
                   <div className="flex items-center justify-between mb-4">
-                    <h3 className="text-base font-semibold">Gerenciar tags</h3>
+                    <h3 className="text-base font-semibold">{t("inbox.manageTags", "Gerenciar tags")}</h3>
                     <button onClick={() => setShowTagModal(false)} className="p-1 rounded hover:bg-accent">
                       <X className="h-4 w-4 text-muted-foreground" />
                     </button>
@@ -1363,7 +1365,7 @@ export default function InboxPage() {
                       type="text"
                       value={tagInput}
                       onChange={(e) => setTagInput(e.target.value)}
-                      placeholder="Nova tag..."
+                      placeholder={t("inbox.newTag", "Nova tag...")}
                       className="flex-1 px-3 py-2 rounded-xl border border-border bg-background text-sm focus:outline-none focus:ring-2 focus:ring-ring/30 focus:border-ring/50 transition-colors"
                       onKeyDown={(e) => {
                         if (e.key === "Enter" && tagInput.trim()) {
