@@ -15,7 +15,7 @@ export default function ThemeSwitch({ className }: { className?: string }) {
   return (
     <div
       className={cn(
-        "relative flex h-7 w-[4.75rem] items-center p-1 rounded-full border border-border hover:border-foreground/20 transition-colors",
+        "relative flex h-6 w-[4.25rem] items-center p-0.5 rounded-full border border-border hover:border-foreground/20 transition-colors",
         className
       )}
       role="group"
@@ -39,10 +39,10 @@ export default function ThemeSwitch({ className }: { className?: string }) {
       ))}
       <div
         className={cn(
-          "absolute top-1 h-5 w-5 rounded-full bg-foreground/10 transition-all duration-200",
-          theme === "system" && "left-1",
-          theme === "light" && "left-[1.375rem]",
-          theme === "dark" && "left-[2.75rem]"
+          "absolute top-0.5 h-5 w-5 rounded-full bg-foreground/10 transition-all duration-200",
+          theme === "system" && "left-0.5",
+          theme === "light" && "left-[1.25rem]",
+          theme === "dark" && "left-[2.5rem]"
         )}
       />
     </div>

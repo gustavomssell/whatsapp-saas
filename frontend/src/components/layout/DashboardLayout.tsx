@@ -150,14 +150,14 @@ export default function DashboardLayout({
             "flex items-center mb-3",
             (collapsed && !isMobile) ? "justify-center" : "justify-between"
           )}>
-            <div className="flex items-center gap-1">
+            <div className="flex items-center gap-0.5 min-w-0">
               <LanguageSwitch />
               <ThemeSwitch />
             </div>
             {!isMobile && (
               <button
                 onClick={() => setCollapsed(!collapsed)}
-                className="p-1.5 rounded-md hover:bg-accent text-muted-foreground transition-colors"
+                className="p-1.5 rounded-md hover:bg-accent text-muted-foreground transition-colors flex-shrink-0 ml-1"
                 title={collapsed ? "Expandir sidebar" : "Recolher sidebar"}
               >
                 <ChevronLeft className={cn("h-4 w-4 transition-transform", collapsed && "rotate-180")} />
