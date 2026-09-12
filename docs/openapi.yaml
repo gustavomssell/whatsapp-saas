@@ -1,0 +1,1228 @@
+openapi: 3.0.3
+info:
+  title: WhatsApp SaaS API
+  description: |
+    API completa para gestão de WhatsApp profissional com modelo multi-tenant.
+    
+    ## Autenticação
+    Todas as rotas (exceto `/api/auth/*`) requerem header `Authorization: Bearer <token>`.
+    
+    ## Multi-tenancy
+    Todas as rotas são escopadas por organização (`org_id`) extraído do JWT.
+  version: 1.0.0
+  contact:
+    name: Gustavo Marques
+    email: gustavomssell@gmail.com
+  license:
+    name: MIT
+    url: https://opensource.org/licenses/MIT
+
+servers:
+  - url: http://localhost:8090
+    description: Desenvolvimento
+
+tags:
+  - name: Auth
+    description: Autenticação e registro
+  - name: WhatsApp
+    description: Conexão e gestão do WhatsApp
+  - name: Conversations
+    description: Conversas e mensagens
+  - name: Contacts
+    description: Gestão de contatos
+  - name: Groups
+    description: Grupos WhatsApp
+  - name: Dashboard
+    description: Métricas e relatórios
+  - name: Settings
+    description: Configurações e equipe
+  - name: Automation
+    description: Automação de respostas
+  - name: Billing
+    description: Planos e assinatura
+
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+
+  schemas:
+    Error:
+      type: object
+      properties:
+        error:
+          type: string
+      example:
+        error: "Token inválido"
+
+    User:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        org_id:
+          type: string
+          format: uuid
+        name:
+          type: string
+        email:
+          type: string
+          format: email
+        role:
+          type: string
+          enum: [owner, admin, member]
+        avatar:
+          type: string
+        phone:
+          type: string
+        created_at:
+          type: string
+          format: date-time
+
+    AuthResult:
+      type: object
+      properties:
+        token:
+          type: string
+        user:
+          $ref: '#/components/schemas/User'
+
+    Conversation:
+      type: object
+      properties:
+        id:
+          type: string
+        jid:
+          type: string
+        name:
+          type: string
+        phone:
+          type: string
+        is_group:
+          type: boolean
+        unread_count:
+          type: integer
+        tags:
+          type: array
+          items:
+            type: string
+        assigned_guide:
+          type: string
+        is_archived:
+          type: boolean
+        is_pinned:
+          type: boolean
+        last_message:
+          type: string
+        last_message_at:
+          type: string
+          format: date-time
+
+    Message:
+      type: object
+      properties:
+        id:
+          type: string
+        conversation_id:
+          type: string
+        sender_name:
+          type: string
+        content:
+          type: string
+        msg_type:
+          type: string
+          enum: [text, media, audio, image, video, document]
+        media_url:
+          type: string
+        from_me:
+          type: boolean
+        status:
+          type: string
+          enum: [sent, delivered, read, pending]
+        reactions:
+          type: object
+        quoted_msg_id:
+          type: string
+        timestamp:
+          type: string
+          format: date-time
+
+    Contact:
+      type: object
+      properties:
+        id:
+          type: string
+        org_id:
+          type: string
+        phone:
+          type: string
+        name:
+          type: string
+        avatar:
+          type: string
+        tags:
+          type: array
+          items:
+            type: string
+        push_name:
+          type: string
+        about:
+          type: string
+
+    Group:
+      type: object
+      properties:
+        id:
+          type: string
+        group_jid:
+          type: string
+        subject:
+          type: string
+        description:
+          type: string
+        participant_count:
+          type: integer
+        is_archived:
+          type: boolean
+
+    QuickReply:
+      type: object
+      properties:
+        id:
+          type: string
+        shortcut:
+          type: string
+        title:
+          type: string
+        content:
+          type: string
+        variables:
+          type: string
+        is_global:
+          type: boolean
+
+    DashboardStats:
+      type: object
+      properties:
+        total_conversations:
+          type: integer
+        unread_conversations:
+          type: integer
+        messages_sent_today:
+          type: integer
+        messages_received_today:
+          type: integer
+        active_groups:
+          type: integer
+
+    Plan:
+      type: object
+      properties:
+        id:
+          type: string
+        name:
+          type: string
+        price_monthly:
+          type: number
+        price_yearly:
+          type: number
+        features:
+          type: string
+        max_conversations:
+          type: integer
+        max_messages:
+          type: integer
+        max_members:
+          type: integer
+
+    AuditLog:
+      type: object
+      properties:
+        id:
+          type: string
+        user_id:
+          type: string
+        user_name:
+          type: string
+        action:
+          type: string
+        details:
+          type: string
+        ip_address:
+          type: string
+        created_at:
+          type: string
+          format: date-time
+
+    AutoReplyRule:
+      type: object
+      properties:
+        id:
+          type: string
+        name:
+          type: string
+        trigger_type:
+          type: string
+          enum: [keyword, exact, startsWith]
+        trigger_value:
+          type: string
+        response_text:
+          type: string
+        is_active:
+          type: boolean
+
+    WelcomeMessage:
+      type: object
+      properties:
+        id:
+          type: string
+        message:
+          type: string
+        is_active:
+          type: boolean
+
+paths:
+  /api/auth/register:
+    post:
+      tags: [Auth]
+      summary: Criar nova conta
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [name, email, password]
+              properties:
+                name:
+                  type: string
+                  example: "João Silva"
+                email:
+                  type: string
+                  format: email
+                  example: "joao@email.com"
+                password:
+                  type: string
+                  minLength: 6
+                  example: "123456"
+                org_name:
+                  type: string
+                  example: "Minha Empresa"
+      responses:
+        '200':
+          description: Conta criada com sucesso
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AuthResult'
+
+  /api/auth/login:
+    post:
+      tags: [Auth]
+      summary: Login
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [email, password]
+              properties:
+                email:
+                  type: string
+                password:
+                  type: string
+      responses:
+        '200':
+          description: Login realizado
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AuthResult'
+
+  /api/auth/refresh:
+    post:
+      tags: [Auth]
+      summary: Renovar token JWT
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [token]
+              properties:
+                token:
+                  type: string
+      responses:
+        '200':
+          description: Novo token
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  token:
+                    type: string
+
+  /api/auth/profile:
+    get:
+      tags: [Auth]
+      summary: Obter perfil do usuário
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: Perfil do usuário
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/User'
+
+  /api/profile:
+    put:
+      tags: [Settings]
+      summary: Atualizar perfil
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                name:
+                  type: string
+                email:
+                  type: string
+                phone:
+                  type: string
+                avatar:
+                  type: string
+      responses:
+        '200':
+          description: Perfil atualizado
+
+  /api/profile/change-password:
+    post:
+      tags: [Settings]
+      summary: Alterar senha
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [current_password, new_password]
+              properties:
+                current_password:
+                  type: string
+                new_password:
+                  type: string
+                  minLength: 6
+      responses:
+        '200':
+          description: Senha alterada
+
+  /api/whatsapp/connect:
+    post:
+      tags: [WhatsApp]
+      summary: Conectar instância WhatsApp
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [instance_name]
+              properties:
+                instance_name:
+                  type: string
+      responses:
+        '200':
+          description: Conexão estabelecida
+
+  /api/whatsapp/status:
+    get:
+      tags: [WhatsApp]
+      summary: Status da conexão WhatsApp
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: Status da conexão
+
+  /api/whatsapp/disconnect:
+    post:
+      tags: [WhatsApp]
+      summary: Desconectar WhatsApp
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: Desconectado
+
+  /api/whatsapp/conversations:
+    get:
+      tags: [Conversations]
+      summary: Listar conversas
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: page
+          in: query
+          schema:
+            type: integer
+            default: 1
+        - name: per_page
+          in: query
+          schema:
+            type: integer
+            default: 50
+        - name: tag
+          in: query
+          schema:
+            type: string
+        - name: guide
+          in: query
+          schema:
+            type: string
+        - name: unread
+          in: query
+          schema:
+            type: boolean
+        - name: search
+          in: query
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Lista de conversas
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/Conversation'
+                  total:
+                    type: integer
+                  page:
+                    type: integer
+                  total_pages:
+                    type: integer
+
+  /api/whatsapp/conversations/{jid}/messages:
+    get:
+      tags: [Conversations]
+      summary: Mensagens de uma conversa
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: jid
+          in: path
+          required: true
+          schema:
+            type: string
+        - name: limit
+          in: query
+          schema:
+            type: integer
+            default: 50
+      responses:
+        '200':
+          description: Lista de mensagens
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Message'
+    post:
+      tags: [Conversations]
+      summary: Enviar mensagem
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: jid
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [text]
+              properties:
+                text:
+                  type: string
+                quoted_msg_id:
+                  type: string
+      responses:
+        '200':
+          description: Mensagem enviada
+
+  /api/whatsapp/conversations/{jid}/archive:
+    post:
+      tags: [Conversations]
+      summary: Arquivar conversa
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: jid
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Conversa arquivada
+
+  /api/whatsapp/conversations/{jid}/unarchive:
+    post:
+      tags: [Conversations]
+      summary: Desarquivar conversa
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: jid
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Conversa desarquivada
+
+  /api/whatsapp/conversations/{jid}/assign:
+    post:
+      tags: [Conversations]
+      summary: Atribuir guia à conversa
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: jid
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [guide]
+              properties:
+                guide:
+                  type: string
+      responses:
+        '200':
+          description: Guia atribuído
+
+  /api/whatsapp/conversations/{jid}/tags:
+    post:
+      tags: [Conversations]
+      summary: Atualizar tags da conversa
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: jid
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [tags]
+              properties:
+                tags:
+                  type: array
+                  items:
+                    type: string
+      responses:
+        '200':
+          description: Tags atualizadas
+
+  /api/whatsapp/conversations/bulk:
+    post:
+      tags: [Conversations]
+      summary: Ações em massa
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [action, ids]
+              properties:
+                action:
+                  type: string
+                  enum: [archive, unarchive, assign, tag]
+                ids:
+                  type: array
+                  items:
+                    type: string
+                guide:
+                  type: string
+                tag:
+                  type: string
+      responses:
+        '200':
+          description: Ação executada
+
+  /api/whatsapp/contacts:
+    get:
+      tags: [Contacts]
+      summary: Listar contatos
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: search
+          in: query
+          schema:
+            type: string
+        - name: tag
+          in: query
+          schema:
+            type: string
+        - name: page
+          in: query
+          schema:
+            type: integer
+        - name: per_page
+          in: query
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: Lista de contatos
+    post:
+      tags: [Contacts]
+      summary: Criar contato
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [phone, name]
+              properties:
+                phone:
+                  type: string
+                name:
+                  type: string
+                avatar:
+                  type: string
+                tags:
+                  type: array
+                  items:
+                    type: string
+      responses:
+        '200':
+          description: Contato criado
+
+  /api/whatsapp/contacts/{contactId}:
+    put:
+      tags: [Contacts]
+      summary: Atualizar contato
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: contactId
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/Contact'
+      responses:
+        '200':
+          description: Contato atualizado
+    delete:
+      tags: [Contacts]
+      summary: Excluir contato
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: contactId
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Contato excluído
+
+  /api/whatsapp/contacts/sync:
+    post:
+      tags: [Contacts]
+      summary: Sincronizar contatos do WhatsApp
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: Contatos sincronizados
+
+  /api/whatsapp/contacts/export:
+    get:
+      tags: [Contacts]
+      summary: Exportar contatos (CSV)
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: CSV com contatos
+
+  /api/whatsapp/contacts/import:
+    post:
+      tags: [Contacts]
+      summary: Importar contatos (CSV)
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              properties:
+                file:
+                  type: string
+                  format: binary
+      responses:
+        '200':
+          description: Contatos importados
+
+  /api/whatsapp/groups:
+    get:
+      tags: [Groups]
+      summary: Listar grupos
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: Lista de grupos
+
+  /api/whatsapp/groups/{groupJid}:
+    put:
+      tags: [Groups]
+      summary: Atualizar grupo
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: groupJid
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                subject:
+                  type: string
+                description:
+                  type: string
+      responses:
+        '200':
+          description: Grupo atualizado
+    delete:
+      tags: [Groups]
+      summary: Excluir grupo
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: groupJid
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Grupo excluído
+
+  /api/whatsapp/quick-replies:
+    get:
+      tags: [WhatsApp]
+      summary: Listar respostas rápidas
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: Lista de respostas rápidas
+    post:
+      tags: [WhatsApp]
+      summary: Criar resposta rápida
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/QuickReply'
+      responses:
+        '200':
+          description: Resposta rápida criada
+
+  /api/dashboard/stats:
+    get:
+      tags: [Dashboard]
+      summary: Estatísticas do dashboard
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: Estatísticas
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DashboardStats'
+
+  /api/dashboard/chart:
+    get:
+      tags: [Dashboard]
+      summary: Dados para gráfico
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: days
+          in: query
+          schema:
+            type: integer
+            default: 7
+            enum: [7, 14, 30]
+      responses:
+        '200':
+          description: Dados do gráfico
+
+  /api/dashboard/guide-stats:
+    get:
+      tags: [Dashboard]
+      summary: Estatísticas por guia
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: Stats por guia
+
+  /api/dashboard/top-contacts:
+    get:
+      tags: [Dashboard]
+      summary: Top contatos
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: limit
+          in: query
+          schema:
+            type: integer
+            default: 5
+      responses:
+        '200':
+          description: Top contatos
+
+  /api/dashboard/response-time:
+    get:
+      tags: [Dashboard]
+      summary: Tempo médio de resposta
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: Tempo de resposta
+
+  /api/dashboard/export:
+    get:
+      tags: [Dashboard]
+      summary: Exportar relatório
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: period
+          in: query
+          schema:
+            type: string
+            default: "7d"
+      responses:
+        '200':
+          description: Relatório em JSON
+
+  /api/org-members:
+    get:
+      tags: [Settings]
+      summary: Listar membros da organização
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: Lista de membros
+
+  /api/org-members/{memberId}/role:
+    put:
+      tags: [Settings]
+      summary: Alterar função do membro
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: memberId
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [role]
+              properties:
+                role:
+                  type: string
+                  enum: [admin, member]
+      responses:
+        '200':
+          description: Função alterada
+
+  /api/org-members/{memberId}:
+    delete:
+      tags: [Settings]
+      summary: Remover membro
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: memberId
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Membro removido
+
+  /api/audit-logs:
+    get:
+      tags: [Settings]
+      summary: Logs de auditoria
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: limit
+          in: query
+          schema:
+            type: integer
+            default: 50
+        - name: offset
+          in: query
+          schema:
+            type: integer
+            default: 0
+      responses:
+        '200':
+          description: Lista de logs
+
+  /api/auto-reply-rules:
+    get:
+      tags: [Automation]
+      summary: Listar regras automáticas
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: Lista de regras
+    post:
+      tags: [Automation]
+      summary: Criar regra automática
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/AutoReplyRule'
+      responses:
+        '200':
+          description: Regra criada
+
+  /api/auto-reply-rules/{ruleId}:
+    put:
+      tags: [Automation]
+      summary: Atualizar regra automática
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: ruleId
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/AutoReplyRule'
+      responses:
+        '200':
+          description: Regra atualizada
+    delete:
+      tags: [Automation]
+      summary: Excluir regra automática
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: ruleId
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Regra excluída
+
+  /api/welcome-message:
+    get:
+      tags: [Automation]
+      summary: Obter mensagem de boas-vindas
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: Mensagem de boas-vindas
+    put:
+      tags: [Automation]
+      summary: Atualizar mensagem de boas-vindas
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/WelcomeMessage'
+      responses:
+        '200':
+          description: Mensagem atualizada
+
+  /api/billing/plans:
+    get:
+      tags: [Billing]
+      summary: Listar planos disponíveis
+      responses:
+        '200':
+          description: Lista de planos
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Plan'
+
+  /api/billing/plan:
+    get:
+      tags: [Billing]
+      summary: Plano atual da organização
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: Informações do plano
+
+  /api/billing/subscribe:
+    post:
+      tags: [Billing]
+      summary: Assinar plano
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [plan_name]
+              properties:
+                plan_name:
+                  type: string
+                billing_cycle:
+                  type: string
+                  enum: [monthly, yearly]
+      responses:
+        '200':
+          description: Assinatura criada
+
+  /api/webhook/whatsapp:
+    post:
+      tags: [WhatsApp]
+      summary: Webhook da Evolution API
+      description: Recebe eventos do WhatsApp (mensagens, status, etc.)
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                event:
+                  type: string
+                instance:
+                  type: string
+                data:
+                  type: object
+      responses:
+        '200':
+          description: Evento processado
+
+  /ws:
+    get:
+      tags: [WhatsApp]
+      summary: WebSocket para mensagens em tempo real
+      description: |
+        Conexão WebSocket para receber mensagens em tempo real.
+        
+        Query parameter: `token` (JWT)
+        
+        Eventos recebidos:
+        - `new_message` — Nova mensagem
+        - `message_status` — Status atualizado
+        - `connection_update` — Status da conexão
+      parameters:
+        - name: token
+          in: query
+          required: true
+          schema:
+            type: string
+      responses:
+        '101':
+          description: WebSocket upgrade
