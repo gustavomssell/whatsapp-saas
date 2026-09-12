@@ -47,7 +47,7 @@ export function useSocket(onMessage?: (msg: WSMessage) => void) {
         const data: WSMessage = JSON.parse(event.data);
         if (data.type === "pong") return;
         onMessageRef.current?.(data);
-      } catch (e) {
+      } catch {
         // ignore
       }
     };

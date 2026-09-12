@@ -18,7 +18,7 @@ apiClient.interceptors.request.use((config) => {
         config.headers.Authorization = `Bearer ${token}`;
       }
     }
-  } catch {}
+  } catch { /* localStorage read failed */ }
   return config;
 });
 

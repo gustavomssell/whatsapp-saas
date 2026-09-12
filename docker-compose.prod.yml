@@ -1,0 +1,79 @@
+services:
+  postgres:
+    image: postgres:16-alpine
+    container_name: wpsaas_db
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB:-wpsaas}
+      POSTGRES_USER: ${POSTGRES_USER:-postgres}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?Define POSTGRES_PASSWORD in .env}
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./backend/migrations:/docker-entrypoint-initdb.d:ro
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-postgres} -d ${POSTGRES_DB:-wpsaas}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - wpsaas
+
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: wpsaas_api
+    restart: unless-stopped
+    environment:
+      DATABASE_URL: postgres://${POSTGRES_USER:-postgres}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB:-wpsaas}?sslmode=disable
+      JWT_SECRET: ${JWT_SECRET:?Define JWT_SECRET in .env}
+      PORT: 8080
+      ENV: production
+      UPLOAD_DIR: /app/uploads
+      UPLOAD_MAX_SIZE_MB: 32
+      UPLOAD_PUBLIC_URL: ${UPLOAD_PUBLIC_URL:-http://localhost:8090/uploads}
+      EVOLUTION_API_URL: ${EVOLUTION_API_URL:-http://host.docker.internal:8082}
+      EVOLUTION_API_KEY: ${EVOLUTION_API_KEY:-}
+    volumes:
+      - uploads_data:/app/uploads
+    depends_on:
+      postgres:
+        condition: service_healthy
+    networks:
+      - wpsaas
+
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    container_name: wpsaas_web
+    restart: unless-stopped
+    depends_on:
+      - backend
+    networks:
+      - wpsaas
+
+  nginx:
+    image: nginx:alpine
+    container_name: wpsaas_nginx
+    restart: unless-stopped
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./nginx/nginx.conf:/etc/nginx/nginx.conf:ro
+      - ./nginx/certs:/etc/nginx/certs:ro
+    depends_on:
+      - frontend
+      - backend
+    networks:
+      - wpsaas
+
+volumes:
+  postgres_data:
+    name: wpsaas_postgres_data_prod
+  uploads_data:
+
+networks:
+  wpsaas:
+    driver: bridge
