@@ -40,8 +40,8 @@ export const api = {
   pinConversation: (jid: string, pinned: boolean) =>
     apiClient.post<any>(`/whatsapp/conversations/${encodeURIComponent(jid)}/pin`, { pinned }).then((r) => r.data),
 
-  updateMessageContent: (remoteMsgID: string, content: string) =>
-    apiClient.post<any>("/whatsapp/conversations/edit", { msg_id: remoteMsgID, text: content }).then((r) => r.data),
+  updateMessageContent: (jid: string, msgId: string, content: string) =>
+    apiClient.post<any>(`/whatsapp/conversations/${encodeURIComponent(jid)}/edit`, { msg_id: msgId, text: content }).then((r) => r.data),
 
   connectWhatsApp: (instanceName: string, webhookUrl: string) =>
     apiClient.post<{ qr_code: string }>("/whatsapp/connect", { instance_name: instanceName, webhook_url: webhookUrl }).then((r) => r.data),

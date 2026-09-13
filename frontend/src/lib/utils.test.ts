@@ -9,7 +9,8 @@ describe("cn utility", () => {
   });
 
   it("handles conditional classes", () => {
-    const result = cn("base", false && "hidden", "extra");
+    const hidden = false;
+    const result = cn("base", hidden && "hidden", "extra");
     expect(result).toContain("base");
     expect(result).not.toContain("hidden");
     expect(result).toContain("extra");

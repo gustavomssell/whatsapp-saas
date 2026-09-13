@@ -270,7 +270,7 @@ export default function InboxPage() {
     setSending(true);
     try {
       if (editingMsg) {
-        await api.updateMessageContent(editingMsg.id, text.trim());
+        await api.updateMessageContent(selectedConv.jid, editingMsg.id, text.trim());
         setMessages((prev) =>
           prev.map((m) =>
             m.remote_msg_id === editingMsg.id
