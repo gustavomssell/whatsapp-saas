@@ -127,6 +127,21 @@ export default function InboxPage() {
 
   // Typing indicator
   const [typingJid, setTypingJid] = useState<string | null>(null);
+  const typingTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  const sendTyping = useCallback((presence: "composing" | "paused" | "recording") => {
+    if (!selectedConv) return;
+    api.sendPresence(selectedConv.jid, presence).catch(console.error);
+  }, [selectedConv]);
+
+  const handleTyping = useCallback(() => {
+    if (!selectedConv) return;
+    sendTyping("composing");
+    if (typingTimeoutRef.current) clearTimeout(typingTimeoutRef.current);
+    typingTimeoutRef.current = setTimeout(() => {
+      sendTyping("paused");
+    }, 3000);
+  }, [selectedConv, sendTyping]);
 
   // Bulk actions
   const [selectedConvIds, setSelectedConvIds] = useState<Set<string>>(new Set());
@@ -422,7 +437,7 @@ export default function InboxPage() {
   const handleDeleteMessage = async (msgId: string, forEveryone: boolean) => {
     if (!selectedConv) return;
     try {
-      await api.deleteMessage(selectedConv.jid, msgId, forEveryone);
+      await api.deleteEvolutionMessage(selectedConv.jid, msgId, forEveryone);
       setMessages((prev) =>
         prev.map((m) =>
           m.remote_msg_id === msgId
@@ -553,6 +568,8 @@ export default function InboxPage() {
     if (e.key === "Enter" && !e.shiftKey) {
       e.preventDefault();
       handleSend();
+    } else {
+      handleTyping();
     }
   };
 

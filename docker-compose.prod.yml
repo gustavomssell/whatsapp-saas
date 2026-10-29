@@ -1,4 +1,27 @@
 services:
+  evolution-api:
+    image: atendai/evolution-api:latest
+    container_name: wpsaas_evolution
+    restart: unless-stopped
+    environment:
+      - GLOBAL_API_KEY=${EVOLUTION_API_KEY:?Define EVOLUTION_API_KEY in .env}
+      - DATABASE_URL=postgres://${POSTGRES_USER:-postgres}:${POSTGRES_PASSWORD}@postgres:5432/evolution?sslmode=disable
+      - REDIS_URL=redis://redis:6379
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    networks:
+      - wpsaas
+
+  redis:
+    image: redis:7-alpine
+    container_name: wpsaas_redis
+    restart: unless-stopped
+    networks:
+      - wpsaas
+
   postgres:
     image: postgres:16-alpine
     container_name: wpsaas_db
@@ -32,7 +55,7 @@ services:
       UPLOAD_DIR: /app/uploads
       UPLOAD_MAX_SIZE_MB: 32
       UPLOAD_PUBLIC_URL: ${UPLOAD_PUBLIC_URL:-http://localhost:8090/uploads}
-      EVOLUTION_API_URL: ${EVOLUTION_API_URL:-http://host.docker.internal:8082}
+      EVOLUTION_API_URL: http://evolution-api:8080
       EVOLUTION_API_KEY: ${EVOLUTION_API_KEY:-}
     volumes:
       - uploads_data:/app/uploads
@@ -66,6 +89,7 @@ services:
     depends_on:
       - frontend
       - backend
+      - evolution-api
     networks:
       - wpsaas
 
