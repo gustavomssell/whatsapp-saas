@@ -163,7 +163,7 @@ func (c *EvolutionClient) GetQRCode(instanceName string) (string, error) {
 }
 
 func (c *EvolutionClient) DisconnectInstance(instanceName string) error {
-	_, _, err := c.DoInstanceRequest("GET", instanceName, "/logout", nil)
+	_, _, err := c.DoInstanceRequest("DELETE", instanceName, "/logout", nil)
 	return err
 }
 

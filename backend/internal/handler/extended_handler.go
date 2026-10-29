@@ -55,7 +55,7 @@ func (h *Handler) GetGroupInviteLink(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	resp, body, err := h.wa.GetEvolutionClient().DoInstanceRequest("GET", instanceName, "/group/inviteLink/"+groupJid, nil)
+	resp, body, err := h.wa.GetEvolutionClient().DoGroupRequest("GET", instanceName, "fetchInviteCode/"+groupJid, nil)
 	if err != nil {
 		h.respondError(w, http.StatusInternalServerError, err.Error())
 		return
@@ -484,4 +484,249 @@ func (h *Handler) ExportReport(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/json")
 	w.Header().Set("Content-Disposition", fmt.Sprintf("attachment; filename=relatorio_%s.json", period))
 	json.NewEncoder(w).Encode(report)
+}
+
+// ── Evolution Audio ─────────────────────────────────────────────
+
+func (h *Handler) SendAudio(w http.ResponseWriter, r *http.Request) {
+	orgID := middleware.GetOrgID(r.Context())
+
+	var body struct {
+		Jid      string `json:"jid"`
+		AudioURL string `json:"audio_url"`
+	}
+	if err := json.NewDecoder(r.Body).Decode(&body); err != nil || body.Jid == "" || body.AudioURL == "" {
+		h.respondError(w, http.StatusBadRequest, "jid e audio_url são obrigatórios")
+		return
+	}
+
+	_, instanceName, err := h.repo.GetOrgInstance(r.Context(), orgID)
+	if err != nil || instanceName == "" {
+		h.respondError(w, http.StatusBadRequest, "WhatsApp não conectado")
+		return
+	}
+
+	if _, err := h.wa.GetEvolutionClient().SendWhatsAppAudio(instanceName, body.Jid, body.AudioURL); err != nil {
+		h.respondError(w, http.StatusInternalServerError, err.Error())
+		return
+	}
+
+	h.respondJSON(w, http.StatusOK, map[string]string{"message": "áudio enviado"})
+}
+
+// ── Evolution Presence ──────────────────────────────────────────
+
+func (h *Handler) SendPresence(w http.ResponseWriter, r *http.Request) {
+	orgID := middleware.GetOrgID(r.Context())
+
+	var body struct {
+		Jid      string `json:"jid"`
+		Presence string `json:"presence"` // composing, recording, paused
+	}
+	if err := json.NewDecoder(r.Body).Decode(&body); err != nil || body.Jid == "" || body.Presence == "" {
+		h.respondError(w, http.StatusBadRequest, "jid e presence são obrigatórios")
+		return
+	}
+
+	_, instanceName, err := h.repo.GetOrgInstance(r.Context(), orgID)
+	if err != nil || instanceName == "" {
+		h.respondError(w, http.StatusBadRequest, "WhatsApp não conectado")
+		return
+	}
+
+	if err := h.wa.GetEvolutionClient().SendPresence(instanceName, body.Jid, body.Presence); err != nil {
+		h.respondError(w, http.StatusInternalServerError, err.Error())
+		return
+	}
+
+	h.respondJSON(w, http.StatusOK, map[string]string{"message": "presence enviado"})
+}
+
+// ── Evolution Delete Message ────────────────────────────────────
+
+func (h *Handler) DeleteEvolutionMessage(w http.ResponseWriter, r *http.Request) {
+	orgID := middleware.GetOrgID(r.Context())
+	jid := chi.URLParam(r, "jid")
+	msgID := chi.URLParam(r, "msgId")
+
+	var body struct {
+		ForEveryone bool `json:"for_everyone"`
+	}
+	json.NewDecoder(r.Body).Decode(&body)
+
+	_, instanceName, err := h.repo.GetOrgInstance(r.Context(), orgID)
+	if err != nil || instanceName == "" {
+		h.respondError(w, http.StatusBadRequest, "WhatsApp não conectado")
+		return
+	}
+
+	if err := h.wa.GetEvolutionClient().DeleteMessage(instanceName, msgID, jid, body.ForEveryone); err != nil {
+		h.respondError(w, http.StatusInternalServerError, err.Error())
+		return
+	}
+
+	h.respondJSON(w, http.StatusOK, map[string]string{"message": "mensagem deletada"})
+}
+
+// ── Evolution Update Message ────────────────────────────────────
+
+func (h *Handler) UpdateEvolutionMessage(w http.ResponseWriter, r *http.Request) {
+	orgID := middleware.GetOrgID(r.Context())
+	jid := chi.URLParam(r, "jid")
+	msgID := chi.URLParam(r, "msgId")
+
+	var body struct {
+		Text string `json:"text"`
+	}
+	if err := json.NewDecoder(r.Body).Decode(&body); err != nil || body.Text == "" {
+		h.respondError(w, http.StatusBadRequest, "text é obrigatório")
+		return
+	}
+
+	_, instanceName, err := h.repo.GetOrgInstance(r.Context(), orgID)
+	if err != nil || instanceName == "" {
+		h.respondError(w, http.StatusBadRequest, "WhatsApp não conectado")
+		return
+	}
+
+	if err := h.wa.GetEvolutionClient().UpdateMessage(instanceName, jid, msgID, body.Text); err != nil {
+		h.respondError(w, http.StatusInternalServerError, err.Error())
+		return
+	}
+
+	h.respondJSON(w, http.StatusOK, map[string]string{"message": "mensagem atualizada"})
+}
+
+// ── Evolution Mark As Read ──────────────────────────────────────
+
+func (h *Handler) MarkAsRead(w http.ResponseWriter, r *http.Request) {
+	orgID := middleware.GetOrgID(r.Context())
+	jid := chi.URLParam(r, "jid")
+
+	var body struct {
+		MsgID string `json:"msg_id"`
+		FromMe bool  `json:"from_me"`
+	}
+	json.NewDecoder(r.Body).Decode(&body)
+
+	_, instanceName, err := h.repo.GetOrgInstance(r.Context(), orgID)
+	if err != nil || instanceName == "" {
+		h.respondError(w, http.StatusBadRequest, "WhatsApp não conectado")
+		return
+	}
+
+	if err := h.wa.GetEvolutionClient().MarkAsRead(instanceName, jid, body.MsgID, body.FromMe); err != nil {
+		h.respondError(w, http.StatusInternalServerError, err.Error())
+		return
+	}
+
+	h.respondJSON(w, http.StatusOK, map[string]string{"message": "marcado como lido"})
+}
+
+// ── Evolution Fetch Profile ─────────────────────────────────────
+
+func (h *Handler) FetchProfile(w http.ResponseWriter, r *http.Request) {
+	orgID := middleware.GetOrgID(r.Context())
+	number := chi.URLParam(r, "number")
+
+	_, instanceName, err := h.repo.GetOrgInstance(r.Context(), orgID)
+	if err != nil || instanceName == "" {
+		h.respondError(w, http.StatusBadRequest, "WhatsApp não conectado")
+		return
+	}
+
+	profile, err := h.wa.GetEvolutionClient().FetchProfile(instanceName, number)
+	if err != nil {
+		h.respondError(w, http.StatusInternalServerError, err.Error())
+		return
+	}
+
+	h.respondJSON(w, http.StatusOK, profile)
+}
+
+// ── Evolution Has WhatsApp ──────────────────────────────────────
+
+func (h *Handler) HasWhatsApp(w http.ResponseWriter, r *http.Request) {
+	orgID := middleware.GetOrgID(r.Context())
+
+	var body struct {
+		Numbers []string `json:"numbers"`
+	}
+	if err := json.NewDecoder(r.Body).Decode(&body); err != nil || len(body.Numbers) == 0 {
+		h.respondError(w, http.StatusBadRequest, "numbers é obrigatório")
+		return
+	}
+
+	_, instanceName, err := h.repo.GetOrgInstance(r.Context(), orgID)
+	if err != nil || instanceName == "" {
+		h.respondError(w, http.StatusBadRequest, "WhatsApp não conectado")
+		return
+	}
+
+	results, err := h.wa.GetEvolutionClient().HasWhatsApp(instanceName, body.Numbers)
+	if err != nil {
+		h.respondError(w, http.StatusInternalServerError, err.Error())
+		return
+	}
+
+	h.respondJSON(w, http.StatusOK, results)
+}
+
+// ── Evolution Create Group ──────────────────────────────────────
+
+func (h *Handler) CreateEvolutionGroup(w http.ResponseWriter, r *http.Request) {
+	orgID := middleware.GetOrgID(r.Context())
+
+	var body struct {
+		Subject      string   `json:"subject"`
+		Description  string   `json:"description"`
+		Participants []string `json:"participants"`
+	}
+	if err := json.NewDecoder(r.Body).Decode(&body); err != nil || body.Subject == "" {
+		h.respondError(w, http.StatusBadRequest, "subject é obrigatório")
+		return
+	}
+
+	_, instanceName, err := h.repo.GetOrgInstance(r.Context(), orgID)
+	if err != nil || instanceName == "" {
+		h.respondError(w, http.StatusBadRequest, "WhatsApp não conectado")
+		return
+	}
+
+	result, err := h.wa.GetEvolutionClient().CreateGroup(instanceName, body.Subject, body.Description, body.Participants)
+	if err != nil {
+		h.respondError(w, http.StatusInternalServerError, err.Error())
+		return
+	}
+
+	h.respondJSON(w, http.StatusCreated, result)
+}
+
+// ── Evolution Update Group Participant ──────────────────────────
+
+func (h *Handler) UpdateGroupParticipant(w http.ResponseWriter, r *http.Request) {
+	orgID := middleware.GetOrgID(r.Context())
+	groupJid := chi.URLParam(r, "groupJid")
+
+	var body struct {
+		Action      string   `json:"action"` // add, remove, promote, demote
+		Participants []string `json:"participants"`
+	}
+	if err := json.NewDecoder(r.Body).Decode(&body); err != nil || body.Action == "" || len(body.Participants) == 0 {
+		h.respondError(w, http.StatusBadRequest, "action e participants são obrigatórios")
+		return
+	}
+
+	_, instanceName, err := h.repo.GetOrgInstance(r.Context(), orgID)
+	if err != nil || instanceName == "" {
+		h.respondError(w, http.StatusBadRequest, "WhatsApp não conectado")
+		return
+	}
+
+	if err := h.wa.GetEvolutionClient().UpdateGroupParticipant(instanceName, groupJid, body.Action, body.Participants); err != nil {
+		h.respondError(w, http.StatusInternalServerError, err.Error())
+		return
+	}
+
+	h.respondJSON(w, http.StatusOK, map[string]string{"message": "participante atualizado"})
 }

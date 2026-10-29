@@ -95,6 +95,14 @@ func main() {
 
 				r.Get("/conversations/{convJid}/notes", h.ListNotes)
 				r.Post("/conversations/{convJid}/notes", h.CreateNote)
+
+				r.Post("/audio", h.SendAudio)
+				r.Post("/presence", h.SendPresence)
+				r.Delete("/messages/{jid}/{msgId}", h.DeleteEvolutionMessage)
+				r.Put("/messages/{jid}/{msgId}", h.UpdateEvolutionMessage)
+				r.Put("/chats/{jid}/markAsRead", h.MarkAsRead)
+				r.Get("/profile/{number}", h.FetchProfile)
+				r.Post("/chats/hasWhatsApp", h.HasWhatsApp)
 			})
 
 			r.Route("/contacts", func(r chi.Router) {
@@ -180,3 +188,4 @@ func corsMiddleware(next http.Handler) http.Handler {
 		next.ServeHTTP(w, r)
 	})
 }
+

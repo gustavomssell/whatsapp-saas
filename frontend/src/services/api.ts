@@ -43,6 +43,35 @@ export const api = {
   updateMessageContent: (jid: string, msgId: string, content: string) =>
     apiClient.post<any>(`/whatsapp/conversations/${encodeURIComponent(jid)}/edit`, { msg_id: msgId, text: content }).then((r) => r.data),
 
+  // ── Novos endpoints Evolution API ─────────────────────────────
+
+  sendAudio: (jid: string, audioUrl: string) =>
+    apiClient.post<any>("/whatsapp/audio", { jid, audio_url: audioUrl }).then((r) => r.data),
+
+  sendPresence: (jid: string, presence: string) =>
+    apiClient.post<any>("/whatsapp/presence", { jid, presence }).then((r) => r.data),
+
+  deleteEvolutionMessage: (jid: string, msgId: string, forEveryone: boolean) =>
+    apiClient.delete<any>(`/whatsapp/messages/${encodeURIComponent(jid)}/${encodeURIComponent(msgId)}`, { data: { for_everyone: forEveryone } }).then((r) => r.data),
+
+  updateEvolutionMessage: (jid: string, msgId: string, text: string) =>
+    apiClient.put<any>(`/whatsapp/messages/${encodeURIComponent(jid)}/${encodeURIComponent(msgId)}`, { text }).then((r) => r.data),
+
+  markAsRead: (jid: string, msgId: string, fromMe: boolean) =>
+    apiClient.put<any>(`/whatsapp/chats/${encodeURIComponent(jid)}/markAsRead`, { msg_id: msgId, from_me: fromMe }).then((r) => r.data),
+
+  fetchProfile: (number: string) =>
+    apiClient.get<any>(`/whatsapp/profile/${encodeURIComponent(number)}`).then((r) => r.data),
+
+  hasWhatsApp: (numbers: string[]) =>
+    apiClient.post<any>("/whatsapp/chats/hasWhatsApp", { numbers }).then((r) => r.data),
+
+  createEvolutionGroup: (subject: string, description: string, participants: string[]) =>
+    apiClient.post<any>("/groups/create", { subject, description, participants }).then((r) => r.data),
+
+  updateGroupParticipant: (groupJid: string, action: string, participants: string[]) =>
+    apiClient.put<any>(`/groups/${encodeURIComponent(groupJid)}/participant`, { action, participants }).then((r) => r.data),
+
   connectWhatsApp: (instanceName: string, webhookUrl: string) =>
     apiClient.post<{ qr_code: string }>("/whatsapp/connect", { instance_name: instanceName, webhook_url: webhookUrl }).then((r) => r.data),
 
@@ -59,7 +88,7 @@ export const api = {
     apiClient.get<{ data: any[] }>("/dashboard/chart", { params: days ? { days } : undefined }).then((r) => r.data),
 
   getGroups: () =>
-    apiClient.get<any[]>("/whatsapp/groups").then((r) => r.data),
+    apiClient.get<any[]>("/groups").then((r) => r.data),
 
   getQuickReplies: () =>
     apiClient.get<any[]>("/whatsapp/quick-replies").then((r) => r.data),
@@ -79,17 +108,14 @@ export const api = {
   searchMessages: (jid: string, query: string) =>
     apiClient.get<any[]>(`/whatsapp/conversations/${encodeURIComponent(jid)}/search`, { params: { q: query } }).then((r) => r.data),
 
-  editMessage: (jid: string, msgId: string, text: string) =>
-    apiClient.post<any>(`/whatsapp/conversations/${encodeURIComponent(jid)}/edit`, { msg_id: msgId, text }).then((r) => r.data),
-
   getTagColors: () =>
-    apiClient.get<any[]>("/whatsapp/tag-colors").then((r) => r.data),
+    apiClient.get<any[]>("/tag-colors").then((r) => r.data),
 
   setTagColor: (tag: string, color: string) =>
-    apiClient.post<any>("/whatsapp/tag-colors", { tag, color }).then((r) => r.data),
+    apiClient.post<any>("/tag-colors", { tag, color }).then((r) => r.data),
 
   deleteTagColor: (tag: string) =>
-    apiClient.delete<any>(`/whatsapp/tag-colors/${encodeURIComponent(tag)}`).then((r) => r.data),
+    apiClient.delete<any>(`/tag-colors/${encodeURIComponent(tag)}`).then((r) => r.data),
 
   getNotes: (convJid: string) =>
     apiClient.get<{ data: any[] }>(`/whatsapp/conversations/${encodeURIComponent(convJid)}/notes`).then((r) => r.data),
